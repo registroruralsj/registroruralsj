@@ -363,6 +363,7 @@ export default function RegistroRuralSanJose() {
   const [reviewsTarget, setReviewsTarget] = useState(null); // { contacto, nombre }
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [misAvisos, setMisAvisos] = useState([]); // ids de los avisos publicados desde este mismo navegador
+  const [onlyMine, setOnlyMine] = useState(false);
   const [deleteToast, setDeleteToast] = useState(false);
 
   useEffect(() => {
@@ -535,6 +536,7 @@ export default function RegistroRuralSanJose() {
   }
 
   const filtered = listings.filter((l) => {
+    if (onlyMine && !misAvisos.includes(l.id)) return false;
     if (filterCat !== "todos" && l.categoria !== filterCat) return false;
     if (filterTipo !== "todos" && l.tipo !== filterTipo) return false;
     if (query.trim()) {
@@ -749,6 +751,28 @@ export default function RegistroRuralSanJose() {
           width: 100%;
         }
         .rr-search input::placeholder { color: var(--ink-soft); }
+
+        .rr-mine-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--paper-card);
+          border: 1px solid var(--line);
+          color: var(--ink-soft);
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 9px 14px;
+          border-radius: 3px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .rr-mine-btn:hover { border-color: var(--stamp); color: var(--ink); }
+        .rr-mine-btn.active {
+          background: var(--stamp);
+          border-color: var(--stamp);
+          color: var(--paper-card);
+        }
 
         .rr-tabs {
           display: flex;
@@ -1337,6 +1361,70 @@ export default function RegistroRuralSanJose() {
           border: 2px solid rgba(255,255,255,0.3);
         }
 
+        .rr-como {
+          padding: 8px 24px 20px;
+          text-align: center;
+        }
+        .rr-como-title {
+          font-family: 'Libre Baskerville', serif;
+          font-size: 22px;
+          font-weight: 700;
+          margin: 0 0 6px;
+          color: var(--ink);
+        }
+        .rr-como-sub {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13.5px;
+          color: var(--ink-soft);
+          margin: 0 0 22px;
+          max-width: 480px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .rr-como-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 18px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        .rr-como-step {
+          background: var(--paper-card);
+          border: 1px solid var(--line);
+          border-radius: 4px;
+          padding: 20px 16px;
+          text-align: left;
+          position: relative;
+        }
+        .rr-como-num {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          background: var(--stamp);
+          color: var(--paper-card);
+          font-family: 'IBM Plex Mono', monospace;
+          font-weight: 600;
+          font-size: 13px;
+          margin-bottom: 10px;
+        }
+        .rr-como-step h3 {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 15px;
+          font-weight: 700;
+          margin: 0 0 6px;
+          color: var(--ink);
+        }
+        .rr-como-step p {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          line-height: 1.55;
+          color: var(--ink-soft);
+          margin: 0;
+        }
+
         .rr-warn {
           margin: 0 24px 0;
           background: #F3E7D8;
@@ -1445,6 +1533,28 @@ export default function RegistroRuralSanJose() {
         </div>
       </header>
 
+      <section className="rr-como">
+        <h2 className="rr-como-title">¿Cómo funciona?</h2>
+        <p className="rr-como-sub">Es simple: mirá lo que hay, contactá directo, o publicá lo tuyo. No hace falta registrarse.</p>
+        <div className="rr-como-grid">
+          <div className="rr-como-step">
+            <span className="rr-como-num">1</span>
+            <h3>Mirá los avisos</h3>
+            <p>Recorré las categorías (Servicios, Maquinaria, Insumos, Ganado, Campos) o buscá directamente lo que necesitás con el buscador de arriba.</p>
+          </div>
+          <div className="rr-como-step">
+            <span className="rr-como-num">2</span>
+            <h3>Contactá directo</h3>
+            <p>Cada aviso tiene un botón para escribir por WhatsApp o llamar por teléfono a la persona que lo publicó. Hablás directo con ella, sin intermediarios.</p>
+          </div>
+          <div className="rr-como-step">
+            <span className="rr-como-num">3</span>
+            <h3>Publicá lo tuyo</h3>
+            <p>¿Tenés algo para ofrecer o necesitás algo? Tocá "Publicar un aviso", completá el formulario con tus datos y listo — queda visible para todos, gratis.</p>
+          </div>
+        </div>
+      </section>
+
       {!storageOk && (
         <div className="rr-warn">
           No se pudo guardar en este navegador (puede pasar en modo privado/incógnito) — los avisos que publiques
@@ -1461,6 +1571,12 @@ export default function RegistroRuralSanJose() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        <button
+          className={`rr-mine-btn ${onlyMine ? "active" : ""}`}
+          onClick={() => setOnlyMine((v) => !v)}
+        >
+          Mis avisos {misAvisos.length > 0 && `(${misAvisos.length})`}
+        </button>
       </div>
 
       <div className="rr-tabs">
@@ -1491,8 +1607,17 @@ export default function RegistroRuralSanJose() {
         <div className="rr-empty">Cargando avisos...</div>
       ) : filtered.length === 0 ? (
         <div className="rr-empty">
-          <div className="rr-empty-title">Todavía no hay avisos acá.</div>
-          <p>Sé el primero en publicar en esta categoría.</p>
+          {onlyMine ? (
+            <>
+              <div className="rr-empty-title">Todavía no publicaste ningún aviso.</div>
+              <p>Los avisos que publiques desde este mismo navegador van a aparecer acá.</p>
+            </>
+          ) : (
+            <>
+              <div className="rr-empty-title">Todavía no hay avisos acá.</div>
+              <p>Sé el primero en publicar en esta categoría.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="rr-grid">
