@@ -63,6 +63,18 @@ function IconCampos({ size = 20, ...props }) {
   );
 }
 
+function IconLogoCampo({ size = 22, ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="18.3" cy="5.6" r="2.2" />
+      <path d="M2.8 19.6h18.4" />
+      <path d="M6.3 19.6V11l3.6-3.6L13.5 11v8.6" />
+      <path d="M8.1 19.6v-4.3h3.6v4.3" />
+      <path d="M14.2 19.6v-6.1l2.3-2.3" strokeWidth="1.4" opacity="0.75" />
+    </svg>
+  );
+}
+
 function BrandSeal({ size = 62 }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} className="rr-seal">
@@ -128,18 +140,31 @@ function IconCampoAbierto({ size = 54, ...props }) {
 }
 
 const CAMPO_EMBLEMAS = [
-  { Icon: IconLecheria, caption: "Lechería" },
-  { Icon: IconOvinosGrande, caption: "Ovinos" },
-  { Icon: IconPapaGrande, caption: "Papa" },
-  { Icon: IconCampoAbierto, caption: "Campo abierto" },
+  { key: "lecheria", Icon: IconLecheria, caption: "Lechería", foto: "fotos/lecheria.jpg" },
+  { key: "ovinos", Icon: IconOvinosGrande, caption: "Ovinos", foto: "fotos/ovinos.jpg" },
+  { key: "papa", Icon: IconPapaGrande, caption: "Papa", foto: "fotos/papa.jpg" },
+  { key: "campo-abierto", Icon: IconCampoAbierto, caption: "Campo abierto", foto: "fotos/campo-abierto.jpg" },
 ];
 
+// Muestra la foto real de public/fotos/ si existe; si todavía no se subió (o no
+// carga), cae de vuelta al ícono dibujado para que la web nunca se vea rota.
 function CampoBanner() {
+  const [failed, setFailed] = useState({});
   return (
     <div className="rr-campo-grid">
       {CAMPO_EMBLEMAS.map((f) => (
-        <figure className="rr-campo-photo" key={f.caption}>
-          <div className="rr-emblem-inner"><f.Icon /></div>
+        <figure className="rr-campo-photo" key={f.key}>
+          {failed[f.key] ? (
+            <div className="rr-emblem-inner"><f.Icon /></div>
+          ) : (
+            <img
+              className="rr-campo-photo-img"
+              src={`${import.meta.env.BASE_URL}${f.foto}`}
+              alt={f.caption}
+              loading="lazy"
+              onError={() => setFailed((prev) => ({ ...prev, [f.key]: true }))}
+            />
+          )}
           <figcaption>{f.caption}</figcaption>
         </figure>
       ))}
@@ -501,6 +526,12 @@ export default function RegistroRuralSanJose() {
             radial-gradient(rgba(31,46,22,0.05) 0.7px, transparent 0.7px);
           background-size: 10px 10px;
         }
+        .rr-campo-photo-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
         .rr-campo-photo figcaption {
           position: absolute;
           left: 0;
@@ -535,7 +566,11 @@ export default function RegistroRuralSanJose() {
           margin-bottom: 0;
           max-width: 60%;
           padding-top: 8px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
+        .rr-eyebrow svg { flex-shrink: 0; color: var(--stamp); }
         .rr-title {
           font-size: 40px;
           font-weight: 700;
@@ -1081,12 +1116,12 @@ export default function RegistroRuralSanJose() {
 
       <header className="rr-hero">
         <div className="rr-hero-top">
-          <div className="rr-eyebrow">Registro rural · Departamento de San José</div>
+          <div className="rr-eyebrow"><IconLogoCampo size={17} /> Registro rural · Departamento de San José</div>
           <BrandSeal size={58} />
         </div>
         <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
         <p className="rr-sub">
-          Servicios, maquinaria, insumos y ganado — un solo tablón para productores
+          Servicios, maquinaria, insumos y ganado — un solo lugar para productores
           y trabajadores rurales del departamento. Nada de lo que no sea del campo.
         </p>
         <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>

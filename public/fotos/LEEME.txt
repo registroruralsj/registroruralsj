@@ -1,0 +1,21 @@
+Poné acá tus 4 fotos reales, con estos nombres EXACTOS (minúsculas, con esos guiones):
+
+- lecheria.jpg
+- ovinos.jpg
+- papa.jpg
+- campo-abierto.jpg
+
+Formato: JPG o PNG. Se ven mejor si son horizontales (más anchas que altas,
+tipo 4:3), porque la web las recorta a ese formato automáticamente.
+
+Podés usar fotos tuyas (del campo de la familia, por ejemplo) o fotos de bancos
+de imágenes gratis y sin derechos de autor como:
+- https://www.pexels.com
+- https://unsplash.com
+- https://pixabay.com
+
+Buscá ahí "dairy cow uruguay", "sheep pasture", "potato field", "open field
+countryside" (o en español) y descargalas.
+
+Mientras no subas una foto con el nombre correcto, la web muestra el ícono
+dibujado como respaldo, así nunca se ve rota.
