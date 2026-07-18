@@ -577,6 +577,25 @@ export default function RegistroRuralSanJose() {
         .rr-display { font-family: 'Libre Baskerville', serif; }
         .rr-mono { font-family: 'IBM Plex Mono', monospace; }
 
+        .rr-hero-banner {
+          position: relative;
+          width: 100%;
+          height: clamp(150px, 26vw, 300px);
+          overflow: hidden;
+        }
+        .rr-hero-banner img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          filter: saturate(0.9) sepia(0.12);
+        }
+        .rr-hero-banner-fade {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(31,46,22,0.15) 0%, rgba(228,226,180,0) 55%, var(--paper) 96%);
+        }
+
         .rr-hero {
           border-bottom: none;
           padding: 36px 24px 0;
@@ -1389,6 +1408,15 @@ export default function RegistroRuralSanJose() {
           .rr-controls, .rr-tabs, .rr-toggle, .rr-grid { padding-left: 16px; padding-right: 16px; }
         }
       `}</style>
+
+      <div className="rr-hero-banner">
+        <img
+          src="https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1600"
+          alt="Campo de San José al atardecer"
+          loading="eager"
+        />
+        <div className="rr-hero-banner-fade" />
+      </div>
 
       <header className="rr-hero">
         <div className="rr-hero-top">
