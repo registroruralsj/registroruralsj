@@ -194,6 +194,7 @@ const ZONAS = [
 
 const STORAGE_KEY = "marketplace-listings-sanjose";
 const RATINGS_KEY = "marketplace-ratings-sanjose";
+const MIS_AVISOS_KEY = "marketplace-mis-avisos-sanjose";
 
 function normalizeContact(contacto) {
   return (contacto || "").replace(/\D/g, "");
@@ -338,6 +339,7 @@ export default function RegistroRuralSanJose() {
   const [ratingToast, setRatingToast] = useState(false);
   const [reviewsTarget, setReviewsTarget] = useState(null); // { contacto, nombre }
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [misAvisos, setMisAvisos] = useState([]); // ids de los avisos publicados desde este mismo navegador
   const [deleteToast, setDeleteToast] = useState(false);
 
   useEffect(() => {
@@ -354,6 +356,12 @@ export default function RegistroRuralSanJose() {
     } catch (err) {
       setRatings(seedRatings());
     }
+    try {
+      const raw = localStorage.getItem(MIS_AVISOS_KEY);
+      setMisAvisos(raw ? JSON.parse(raw) : []);
+    } catch (err) {
+      setMisAvisos([]);
+    }
     setLoading(false);
   }, []);
 
@@ -367,8 +375,18 @@ export default function RegistroRuralSanJose() {
     }
   }
 
+  function persistMisAvisos(next) {
+    setMisAvisos(next);
+    try {
+      localStorage.setItem(MIS_AVISOS_KEY, JSON.stringify(next));
+    } catch (err) {
+      setStorageOk(false);
+    }
+  }
+
   function deleteListing(id) {
     persist(listings.filter((l) => l.id !== id));
+    persistMisAvisos(misAvisos.filter((mid) => mid !== id));
     setConfirmDeleteId(null);
     setDeleteToast(true);
     setTimeout(() => setDeleteToast(false), 2200);
@@ -385,6 +403,7 @@ export default function RegistroRuralSanJose() {
     };
     const next = [nuevo, ...listings];
     persist(next);
+    persistMisAvisos([...misAvisos, nuevo.id]);
     setSaving(false);
     setForm(emptyForm);
     setJustPublished(true);
@@ -1485,26 +1504,28 @@ export default function RegistroRuralSanJose() {
                     <Phone size={14} /> Llamar
                   </a>
                 </div>
-                {confirmDeleteId === l.id ? (
-                  <div className="rr-delete-confirm">
-                    <span>¿Borrar este aviso?</span>
-                    <div className="rr-delete-confirm-actions">
-                      <button type="button" className="rr-delete-yes" onClick={() => deleteListing(l.id)}>
-                        Sí, borrar
-                      </button>
-                      <button type="button" className="rr-delete-no" onClick={() => setConfirmDeleteId(null)}>
-                        Cancelar
-                      </button>
+                {misAvisos.includes(l.id) && (
+                  confirmDeleteId === l.id ? (
+                    <div className="rr-delete-confirm">
+                      <span>¿Borrar este aviso?</span>
+                      <div className="rr-delete-confirm-actions">
+                        <button type="button" className="rr-delete-yes" onClick={() => deleteListing(l.id)}>
+                          Sí, borrar
+                        </button>
+                        <button type="button" className="rr-delete-no" onClick={() => setConfirmDeleteId(null)}>
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="rr-delete-link"
-                    onClick={() => setConfirmDeleteId(l.id)}
-                  >
-                    <Trash2 size={12} /> Borrar mi aviso
-                  </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rr-delete-link"
+                      onClick={() => setConfirmDeleteId(l.id)}
+                    >
+                      <Trash2 size={12} /> Borrar mi aviso
+                    </button>
+                  )
                 )}
               </div>
             );
