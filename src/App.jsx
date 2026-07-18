@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, X, MapPin, MessageCircle, Phone, Star, ImagePlus, Trash2 } from "lucide-react";
+import { Search, Plus, X, MapPin, MessageCircle, Phone, Star, ImagePlus, Trash2, Video } from "lucide-react";
 
 /* Iconos de línea dibujados a medida — nada de librería genérica, para que cada
    categoría se sienta propia del campo y no de un marketplace cualquiera. */
@@ -91,7 +91,10 @@ function BrandSeal({ size = 62 }) {
       <text fontSize="7.5" fontFamily="'IBM Plex Mono', monospace" letterSpacing="2.5" fill="currentColor">
         <textPath href="#rr-seal-arc-bottom" startOffset="50%" textAnchor="middle">SAN JOSÉ</textPath>
       </text>
-      <path d="M38 52c1-6 4-9 6-13 0 5 1 6 3 8 1-3 2-4 3-8 2 4 5 7 6 13-1.5 6-8 8.5-9 8.5s-7.5-2.5-9-8.5Z" fill="currentColor" opacity="0.9" />
+      <path d="M50 50.5c4.3 1.6 7 5 7 8.8 0 2.3-1.1 4-2.9 5-.5-2.8-1.7-4.6-3.4-6.2-1.7 1.6-2.9 3.4-3.4 6.2-1.8-1-2.9-2.7-2.9-5 0-3.8 2.7-7.2 6.6-8.8z" fill="currentColor" opacity="0.92" />
+      <path d="M50 52v11.5" strokeWidth="0.9" opacity="0.5" fill="none" stroke="currentColor" />
+      <path d="M39.5 68c4.5-2.1 9-2.1 14 0s9.5 2.1 14 0" fill="none" stroke="currentColor" strokeWidth="1.1" opacity="0.8" />
+      <path d="M41 71.8c4-1.9 8.3-1.9 12.5 0s8.5 1.9 12.5 0" fill="none" stroke="currentColor" strokeWidth="1.1" opacity="0.55" />
     </svg>
   );
 }
@@ -145,7 +148,7 @@ function IconCampoAbierto({ size = 54, ...props }) {
 const CAMPO_EMBLEMAS = [
   { key: "lecheria", Icon: IconLecheria, caption: "Lechería", foto: "https://images.pexels.com/photos/11679517/pexels-photo-11679517.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { key: "ovinos", Icon: IconOvinosGrande, caption: "Ovinos", foto: "https://images.pexels.com/photos/16286489/pexels-photo-16286489.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  { key: "papa", Icon: IconPapaGrande, caption: "Papa", foto: "https://images.pexels.com/photos/144248/pexels-photo-144248.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { key: "papa", Icon: IconPapaGrande, caption: "Papa", foto: "https://images.pexels.com/photos/2797398/pexels-photo-2797398.jpeg?auto=compress&cs=tinysrgb&w=800" },
   { key: "campo-abierto", Icon: IconCampoAbierto, caption: "Campo abierto", foto: "https://images.pexels.com/photos/26699517/pexels-photo-26699517.jpeg?auto=compress&cs=tinysrgb&w=800" },
 ];
 
@@ -203,6 +206,8 @@ function isValidPhone(contacto) {
 
 const emptyRatingForm = { stars: 0, comment: "", nombre: "" };
 
+const MAX_FOTOS = 3;
+
 const emptyForm = {
   tipo: "ofrezco",
   categoria: "servicios",
@@ -212,7 +217,8 @@ const emptyForm = {
   precio: "",
   nombre: "",
   contacto: "",
-  foto: "",
+  fotos: [],
+  video: "",
 };
 
 // Redimensiona y comprime la foto en el navegador antes de guardarla, así un
@@ -387,11 +393,15 @@ export default function RegistroRuralSanJose() {
     setPhotoBusy(true);
     try {
       const dataUrl = await compressImage(file);
-      setForm((f) => ({ ...f, foto: dataUrl }));
+      setForm((f) => ({ ...f, fotos: [...f.fotos, dataUrl].slice(0, MAX_FOTOS) }));
     } catch (err) {
       setPhotoError("No se pudo procesar esa imagen, probá con otra.");
     }
     setPhotoBusy(false);
+  }
+
+  function removePhoto(index) {
+    setForm((f) => ({ ...f, fotos: f.fotos.filter((_, i) => i !== index) }));
   }
 
   function persistRatings(next) {
@@ -710,6 +720,7 @@ export default function RegistroRuralSanJose() {
           overflow: hidden;
           border-radius: 4px 4px 0 0;
           background: var(--line);
+          position: relative;
         }
         .rr-card-photo img {
           width: 100%;
@@ -717,6 +728,32 @@ export default function RegistroRuralSanJose() {
           object-fit: cover;
           display: block;
         }
+        .rr-card-photo-extra {
+          position: absolute;
+          bottom: 6px;
+          right: 6px;
+          display: flex;
+          gap: 4px;
+        }
+        .rr-card-photo-extra img {
+          width: 34px;
+          height: 34px;
+          border-radius: 3px;
+          border: 1.5px solid var(--paper-card);
+          object-fit: cover;
+        }
+        .rr-video-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--stamp);
+          text-decoration: none;
+          margin-top: -4px;
+          width: fit-content;
+        }
+        .rr-video-link:hover { color: var(--stamp-soft); text-decoration: underline; }
         .rr-stamp {
           position: absolute;
           top: -10px;
@@ -937,18 +974,29 @@ export default function RegistroRuralSanJose() {
           color: var(--ink-soft);
         }
         .rr-field-error { color: var(--stamp); }
+        .rr-photo-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
         .rr-photo-upload {
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 8px;
+          justify-content: center;
+          gap: 6px;
           border: 1px dashed var(--line);
           border-radius: 3px;
-          padding: 10px 12px;
           cursor: pointer;
           color: var(--ink-soft);
-          font-size: 13px;
+          font-size: 11px;
+          text-align: center;
           background: var(--paper);
           position: relative;
+        }
+        .rr-photo-upload-tile {
+          aspect-ratio: 1 / 1;
+          padding: 6px;
         }
         .rr-photo-upload:hover { border-color: var(--stamp); color: var(--ink); }
         .rr-photo-upload input {
@@ -963,28 +1011,27 @@ export default function RegistroRuralSanJose() {
           border-radius: 3px;
           overflow: hidden;
           border: 1px solid var(--line);
+          aspect-ratio: 1 / 1;
         }
         .rr-photo-preview img {
           width: 100%;
-          max-height: 200px;
+          height: 100%;
           object-fit: cover;
           display: block;
         }
         .rr-photo-remove {
           position: absolute;
-          bottom: 8px;
-          right: 8px;
+          top: 4px;
+          right: 4px;
           background: rgba(31,46,22,0.82);
           color: #F3F1DA;
           border: none;
           border-radius: 3px;
-          padding: 5px 9px;
-          font-size: 12px;
+          padding: 4px;
           display: flex;
           align-items: center;
-          gap: 4px;
+          justify-content: center;
           cursor: pointer;
-          font-family: 'Public Sans', sans-serif;
         }
         .rr-field input:focus, .rr-field select:focus, .rr-field textarea:focus {
           outline: 2px solid var(--gold);
@@ -1219,11 +1266,20 @@ export default function RegistroRuralSanJose() {
               `Hola ${l.nombre}, te escribo por tu aviso "${l.titulo}" en Registro Rural San José.`
             )}`;
             const stats = ratingStats(l.contacto);
+            // Compatibilidad con avisos viejos que tenían una sola "foto" en vez de "fotos".
+            const fotos = l.fotos && l.fotos.length ? l.fotos : l.foto ? [l.foto] : [];
             return (
               <div className="rr-card" key={l.id}>
-                {l.foto && (
+                {fotos.length > 0 && (
                   <div className="rr-card-photo">
-                    <img src={l.foto} alt={l.titulo} loading="lazy" />
+                    <img src={fotos[0]} alt={l.titulo} loading="lazy" />
+                    {fotos.length > 1 && (
+                      <div className="rr-card-photo-extra">
+                        {fotos.slice(1, 3).map((f, i) => (
+                          <img key={i} src={f} alt={`${l.titulo} foto ${i + 2}`} loading="lazy" />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className={`rr-stamp ${l.tipo === "busco" ? "busco" : ""}`}>
@@ -1234,6 +1290,11 @@ export default function RegistroRuralSanJose() {
                   <div className="rr-card-zona"><MapPin size={12} /> {l.zona}</div>
                 </div>
                 <p className="rr-card-desc">{l.descripcion}</p>
+                {l.video && (
+                  <a className="rr-video-link" href={l.video} target="_blank" rel="noopener noreferrer">
+                    <Video size={13} /> Ver video
+                  </a>
+                )}
                 <div className="rr-contact">
                   <Phone size={13} /> {l.nombre} · {l.contacto}
                 </div>
@@ -1333,31 +1394,47 @@ export default function RegistroRuralSanJose() {
               </div>
 
               <div className="rr-field">
-                <label>Foto (opcional)</label>
-                {form.foto ? (
-                  <div className="rr-photo-preview">
-                    <img src={form.foto} alt="Vista previa del aviso" />
-                    <button
-                      type="button"
-                      className="rr-photo-remove"
-                      onClick={() => setForm({ ...form, foto: "" })}
-                    >
-                      <Trash2 size={13} /> Quitar foto
-                    </button>
-                  </div>
-                ) : (
-                  <label className="rr-photo-upload">
-                    <ImagePlus size={18} />
-                    <span>{photoBusy ? "Procesando imagen..." : "Elegir una foto"}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      disabled={photoBusy}
-                    />
-                  </label>
-                )}
+                <label>Fotos (opcional, hasta {MAX_FOTOS})</label>
+                <div className="rr-photo-grid">
+                  {form.fotos.map((foto, i) => (
+                    <div className="rr-photo-preview" key={i}>
+                      <img src={foto} alt={`Foto ${i + 1} del aviso`} />
+                      <button
+                        type="button"
+                        className="rr-photo-remove"
+                        onClick={() => removePhoto(i)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                  {form.fotos.length < MAX_FOTOS && (
+                    <label className="rr-photo-upload rr-photo-upload-tile">
+                      <ImagePlus size={18} />
+                      <span>{photoBusy ? "Procesando..." : "Agregar foto"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                        disabled={photoBusy}
+                      />
+                    </label>
+                  )}
+                </div>
                 {photoError && <span className="rr-field-hint rr-field-error">{photoError}</span>}
+              </div>
+
+              <div className="rr-field">
+                <label>Video (opcional)</label>
+                <input
+                  type="url"
+                  placeholder="Pegá acá un link de YouTube, Instagram o Drive"
+                  value={form.video}
+                  onChange={(e) => setForm({ ...form, video: e.target.value })}
+                />
+                <span className="rr-field-hint">
+                  Pegá el link a un video ya subido (YouTube, Instagram, TikTok, Drive, etc.), no se puede subir el archivo directo.
+                </span>
               </div>
 
               <div className="rr-field">
