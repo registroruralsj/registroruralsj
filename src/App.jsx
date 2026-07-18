@@ -63,14 +63,17 @@ function IconCampos({ size = 20, ...props }) {
   );
 }
 
-function IconLogoCampo({ size = 22, ...props }) {
+function IconLogoCampo({ size = 26, ...props }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <circle cx="18.3" cy="5.6" r="2.2" />
-      <path d="M2.8 19.6h18.4" />
-      <path d="M6.3 19.6V11l3.6-3.6L13.5 11v8.6" />
-      <path d="M8.1 19.6v-4.3h3.6v4.3" />
-      <path d="M14.2 19.6v-6.1l2.3-2.3" strokeWidth="1.4" opacity="0.75" />
+    <svg viewBox="0 0 40 40" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="20" cy="20" r="17.3" strokeWidth="1.3" opacity="0.5" />
+      <path d="M20 29V13.5" strokeWidth="1.7" />
+      <path d="M20 13.5c-2.8-1-4.6-3.1-4.6-6.8 1.9 1 3.6 1 4.6 2.8 1-1.8 2.7-1.8 4.6-2.8 0 3.7-1.8 5.8-4.6 6.8z" fill="currentColor" stroke="none" opacity="0.92" />
+      <path d="M20 18.8c-2.1-.5-3.5-1.8-4-4 1.5.3 2.7.7 3.6 2" />
+      <path d="M20 18.8c2.1-.5 3.5-1.8 4-4-1.5.3-2.7.7-3.6 2" />
+      <path d="M20 23.4c-1.9-.4-3.2-1.6-3.6-3.6 1.4.3 2.4.6 3.2 1.8" />
+      <path d="M20 23.4c1.9-.4 3.2-1.6 3.6-3.6-1.4.3-2.4.6-3.2 1.8" />
+      <path d="M13 29h14" strokeWidth="1.3" opacity="0.75" />
     </svg>
   );
 }
@@ -140,10 +143,10 @@ function IconCampoAbierto({ size = 54, ...props }) {
 }
 
 const CAMPO_EMBLEMAS = [
-  { key: "lecheria", Icon: IconLecheria, caption: "Lechería", foto: "fotos/lecheria.jpg" },
-  { key: "ovinos", Icon: IconOvinosGrande, caption: "Ovinos", foto: "fotos/ovinos.jpg" },
-  { key: "papa", Icon: IconPapaGrande, caption: "Papa", foto: "fotos/papa.jpg" },
-  { key: "campo-abierto", Icon: IconCampoAbierto, caption: "Campo abierto", foto: "fotos/campo-abierto.jpg" },
+  { key: "lecheria", Icon: IconLecheria, caption: "Lechería", foto: "https://images.pexels.com/photos/11679517/pexels-photo-11679517.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { key: "ovinos", Icon: IconOvinosGrande, caption: "Ovinos", foto: "https://images.pexels.com/photos/16286489/pexels-photo-16286489.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { key: "papa", Icon: IconPapaGrande, caption: "Papa", foto: "https://images.pexels.com/photos/144248/pexels-photo-144248.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  { key: "campo-abierto", Icon: IconCampoAbierto, caption: "Campo abierto", foto: "https://images.pexels.com/photos/26699517/pexels-photo-26699517.jpeg?auto=compress&cs=tinysrgb&w=800" },
 ];
 
 // Muestra la foto real de public/fotos/ si existe; si todavía no se subió (o no
@@ -159,7 +162,7 @@ function CampoBanner() {
           ) : (
             <img
               className="rr-campo-photo-img"
-              src={`${import.meta.env.BASE_URL}${f.foto}`}
+              src={f.foto}
               alt={f.caption}
               loading="lazy"
               onError={() => setFailed((prev) => ({ ...prev, [f.key]: true }))}
@@ -539,13 +542,13 @@ export default function RegistroRuralSanJose() {
           bottom: 0;
           background: var(--paper-card);
           border-top: 1px dashed var(--line);
-          color: var(--ink-soft);
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 10px;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
+          color: var(--ink);
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12.5px;
+          font-weight: 600;
+          letter-spacing: 0.01em;
           text-align: center;
-          padding: 6px 8px;
+          padding: 7px 8px;
         }
         .rr-campo-caption {
           display: block;
@@ -1032,9 +1035,10 @@ export default function RegistroRuralSanJose() {
           margin: 0 auto;
         }
         .rr-footer p {
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 10.5px;
-          line-height: 1.6;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12px;
+          font-weight: 400;
+          line-height: 1.75;
           color: var(--ink-soft);
           text-align: center;
           margin: 0;
@@ -1131,7 +1135,7 @@ export default function RegistroRuralSanJose() {
 
       <header className="rr-hero">
         <div className="rr-hero-top">
-          <div className="rr-eyebrow"><IconLogoCampo size={17} /> Registro rural · Departamento de San José</div>
+          <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
           <BrandSeal size={58} />
         </div>
         <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
