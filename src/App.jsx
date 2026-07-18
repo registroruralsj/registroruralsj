@@ -329,6 +329,8 @@ export default function RegistroRuralSanJose() {
   const [saving, setSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoError, setVideoError] = useState("");
   const [ratings, setRatings] = useState({});
   const [ratingTarget, setRatingTarget] = useState(null); // { contacto, nombre }
   const [ratingForm, setRatingForm] = useState(emptyRatingForm);
@@ -402,6 +404,38 @@ export default function RegistroRuralSanJose() {
 
   function removePhoto(index) {
     setForm((f) => ({ ...f, fotos: f.fotos.filter((_, i) => i !== index) }));
+  }
+
+  const MAX_VIDEO_BYTES = 4 * 1024 * 1024; // ~4MB: límite práctico para que entre en localStorage
+
+  async function handleVideoChange(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      setVideoError("Elegí un archivo de video válido.");
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setVideoError(
+        "Ese video pesa demasiado para subirlo directo (máx. ~4MB, unos 10-15 segundos). Grabá uno más corto, o subilo a YouTube/Instagram y pegá el link abajo."
+      );
+      return;
+    }
+    setVideoError("");
+    setVideoBusy(true);
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("No se pudo leer el video"));
+        reader.readAsDataURL(file);
+      });
+      setForm((f) => ({ ...f, video: dataUrl }));
+    } catch (err) {
+      setVideoError("No se pudo procesar ese video, probá con otro.");
+    }
+    setVideoBusy(false);
   }
 
   function persistRatings(next) {
@@ -876,22 +910,46 @@ export default function RegistroRuralSanJose() {
           color: var(--ink-soft);
           margin-top: -4px;
         }
+        .rr-contact-actions {
+          display: flex;
+          gap: 8px;
+        }
         .rr-contact-btn {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
+          flex: 1;
           background: transparent;
           border: 1px solid var(--green);
           color: var(--green);
           font-family: 'Public Sans', sans-serif;
           font-size: 13px;
           font-weight: 500;
-          padding: 7px 12px;
+          padding: 7px 10px;
           border-radius: 3px;
           cursor: pointer;
           text-decoration: none;
         }
         .rr-contact-btn:hover { background: var(--green); color: var(--paper-card); }
+        .rr-call-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          flex: 1;
+          background: transparent;
+          border: 1px solid var(--stamp);
+          color: var(--stamp);
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          padding: 7px 10px;
+          border-radius: 3px;
+          cursor: pointer;
+          text-decoration: none;
+        }
+        .rr-call-btn:hover { background: var(--stamp); color: var(--paper-card); }
 
         .rr-empty {
           padding: 60px 24px;
@@ -1032,6 +1090,42 @@ export default function RegistroRuralSanJose() {
           align-items: center;
           justify-content: center;
           cursor: pointer;
+        }
+        .rr-video-upload-row {
+          flex-direction: row;
+          aspect-ratio: auto;
+          padding: 10px 12px;
+          gap: 8px;
+          font-size: 13px;
+        }
+        .rr-video-preview {
+          position: relative;
+          border-radius: 3px;
+          overflow: hidden;
+          border: 1px solid var(--line);
+        }
+        .rr-video-preview video {
+          width: 100%;
+          max-height: 220px;
+          display: block;
+          background: #000;
+        }
+        .rr-video-link-chip {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 12px;
+          font-size: 13px;
+          color: var(--ink-soft);
+          background: var(--paper);
+        }
+        .rr-card-video {
+          width: 100%;
+          max-height: 200px;
+          display: block;
+          border-radius: 3px;
+          margin-top: -4px;
+          background: #000;
         }
         .rr-field input:focus, .rr-field select:focus, .rr-field textarea:focus {
           outline: 2px solid var(--gold);
@@ -1291,9 +1385,13 @@ export default function RegistroRuralSanJose() {
                 </div>
                 <p className="rr-card-desc">{l.descripcion}</p>
                 {l.video && (
-                  <a className="rr-video-link" href={l.video} target="_blank" rel="noopener noreferrer">
-                    <Video size={13} /> Ver video
-                  </a>
+                  l.video.startsWith("data:video") ? (
+                    <video className="rr-card-video" src={l.video} controls preload="metadata" />
+                  ) : (
+                    <a className="rr-video-link" href={l.video} target="_blank" rel="noopener noreferrer">
+                      <Video size={13} /> Ver video
+                    </a>
+                  )
                 )}
                 <div className="rr-contact">
                   <Phone size={13} /> {l.nombre} · {l.contacto}
@@ -1320,9 +1418,14 @@ export default function RegistroRuralSanJose() {
                   <span className="rr-price">{l.precio || "A convenir"}</span>
                   <span className="rr-date">{timeAgo(l.fecha)}</span>
                 </div>
-                <a className="rr-contact-btn" href={waLink} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle size={14} /> Contactar por WhatsApp
-                </a>
+                <div className="rr-contact-actions">
+                  <a className="rr-contact-btn" href={waLink} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle size={14} /> WhatsApp
+                  </a>
+                  <a className="rr-call-btn" href={`tel:+598${waNumber}`}>
+                    <Phone size={14} /> Llamar
+                  </a>
+                </div>
               </div>
             );
           })}
@@ -1426,15 +1529,46 @@ export default function RegistroRuralSanJose() {
 
               <div className="rr-field">
                 <label>Video (opcional)</label>
-                <input
-                  type="url"
-                  placeholder="Pegá acá un link de YouTube, Instagram o Drive"
-                  value={form.video}
-                  onChange={(e) => setForm({ ...form, video: e.target.value })}
-                />
-                <span className="rr-field-hint">
-                  Pegá el link a un video ya subido (YouTube, Instagram, TikTok, Drive, etc.), no se puede subir el archivo directo.
-                </span>
+                {form.video ? (
+                  <div className="rr-video-preview">
+                    {form.video.startsWith("data:video") ? (
+                      <video src={form.video} controls />
+                    ) : (
+                      <div className="rr-video-link-chip"><Video size={14} /> Link de video cargado</div>
+                    )}
+                    <button
+                      type="button"
+                      className="rr-photo-remove"
+                      onClick={() => setForm({ ...form, video: "" })}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <label className="rr-photo-upload rr-video-upload-row">
+                      <Video size={18} />
+                      <span>{videoBusy ? "Procesando video..." : "Subir video desde la galería"}</span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={handleVideoChange}
+                        disabled={videoBusy}
+                      />
+                    </label>
+                    <span className="rr-field-hint">
+                      Máximo ~4MB (10-15 segundos). Si es más largo, subilo a YouTube, Instagram o Drive y pegá el link acá:
+                    </span>
+                    <input
+                      type="url"
+                      placeholder="O pegá un link (YouTube, Instagram, Drive...)"
+                      value={form.video}
+                      onChange={(e) => setForm({ ...form, video: e.target.value })}
+                      style={{ marginTop: "6px" }}
+                    />
+                  </>
+                )}
+                {videoError && <span className="rr-field-hint rr-field-error">{videoError}</span>}
               </div>
 
               <div className="rr-field">
