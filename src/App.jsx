@@ -1025,6 +1025,21 @@ export default function RegistroRuralSanJose() {
         .rr-submit:hover { background: var(--green-soft); }
         .rr-submit:disabled { opacity: 0.6; cursor: default; }
 
+        .rr-footer {
+          border-top: 1px dashed var(--line);
+          padding: 18px 24px 32px;
+          max-width: 640px;
+          margin: 0 auto;
+        }
+        .rr-footer p {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10.5px;
+          line-height: 1.6;
+          color: var(--ink-soft);
+          text-align: center;
+          margin: 0;
+        }
+
         .rr-toast {
           position: fixed;
           bottom: 24px;
@@ -1121,8 +1136,9 @@ export default function RegistroRuralSanJose() {
         </div>
         <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
         <p className="rr-sub">
-          Servicios, maquinaria, insumos y ganado — un solo lugar para productores
-          y trabajadores rurales del departamento. Nada de lo que no sea del campo.
+          Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
+          productores, empresas del agro y trabajadores autónomos del departamento.
+          Nada de lo que no sea del campo.
         </p>
         <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
           <Plus size={16} /> Publicar un aviso
@@ -1247,6 +1263,19 @@ export default function RegistroRuralSanJose() {
           })}
         </div>
       )}
+
+      <footer className="rr-footer">
+        <p>
+          Registro Rural San José es un espacio abierto para pequeños productores,
+          empresas del agro y trabajadores autónomos del departamento, donde pueden
+          ofrecer sus servicios, maquinaria, insumos o ganado, y también encontrar lo
+          que necesitan. No participamos en las operaciones que se acuerden entre las
+          partes ni nos hacemos responsables por la calidad, el cumplimiento, el pago
+          o cualquier otro aspecto de una compra, venta o contratación: solo ofrecemos
+          la posibilidad de que oferta y demanda se encuentren. Verificá vos mismo la
+          seriedad de la otra parte antes de cerrar cualquier trato.
+        </p>
+      </footer>
 
       {showForm && (
         <div className="rr-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
