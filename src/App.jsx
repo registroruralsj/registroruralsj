@@ -178,6 +178,29 @@ function CampoBanner() {
   );
 }
 
+// Mapa simplificado y dibujado a mano (no es cartografía exacta) para ubicar
+// San José dentro de Uruguay de un vistazo.
+function MapaUruguay({ size = 130 }) {
+  return (
+    <svg viewBox="0 0 200 200" width={size} height={size * 0.86} className="rr-mapa">
+      <path
+        d="M46 22 L104 18 L150 34 L168 62 L162 96 L150 128 L120 158 L92 178 L74 168 L48 150 L28 128 L20 96 L24 60 Z"
+        fill="var(--paper-card)"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="118" cy="118" r="3.5" fill="currentColor" opacity="0.55" />
+      <text x="124" y="116" fontSize="9" fontFamily="'Public Sans', sans-serif" fill="currentColor" opacity="0.6">Montevideo</text>
+
+      <circle cx="72" cy="122" r="9" fill="none" stroke="var(--stamp)" strokeWidth="1.6" strokeDasharray="2 2" />
+      <path d="M72 108c5 0 9 4 9 9 0 6-9 15-9 15s-9-9-9-15c0-5 4-9 9-9z" fill="var(--stamp)" />
+      <circle cx="72" cy="117" r="2.6" fill="var(--paper-card)" />
+      <text x="72" y="146" textAnchor="middle" fontSize="10.5" fontWeight="700" fontFamily="'Public Sans', sans-serif" fill="var(--stamp)">San José</text>
+    </svg>
+  );
+}
+
 const CATEGORIES = [
   { id: "servicios", label: "Servicios", icon: IconServicios, desc: "Changas, mano de obra, esquila, fletes" },
   { id: "maquinaria", label: "Maquinaria", icon: IconMaquinaria, desc: "Tractores, implementos, herramientas" },
@@ -1247,6 +1270,21 @@ export default function RegistroRuralSanJose() {
         .rr-submit:hover { background: var(--green-soft); }
         .rr-submit:disabled { opacity: 0.6; cursor: default; }
 
+        .rr-region {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 36px;
+          flex-wrap: wrap;
+          padding: 28px 24px 8px;
+          color: var(--ink-soft);
+        }
+        .rr-region-escudo {
+          height: 128px;
+          width: auto;
+        }
+        .rr-mapa { color: var(--ink-soft); }
+
         .rr-footer {
           border-top: 1px dashed var(--line);
           padding: 18px 24px 32px;
@@ -1532,6 +1570,11 @@ export default function RegistroRuralSanJose() {
           })}
         </div>
       )}
+
+      <div className="rr-region">
+        <img className="rr-region-escudo" src={`${import.meta.env.BASE_URL}images/escudo-sanjose.png`} alt="Escudo de San José de Mayo" />
+        <MapaUruguay />
+      </div>
 
       <footer className="rr-footer">
         <p>
