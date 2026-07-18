@@ -577,24 +577,25 @@ export default function RegistroRuralSanJose() {
         .rr-display { font-family: 'Libre Baskerville', serif; }
         .rr-mono { font-family: 'IBM Plex Mono', monospace; }
 
-        .rr-hero-banner {
+        .rr-hero-photo {
           position: relative;
-          width: 100%;
-          height: clamp(150px, 26vw, 300px);
+          background-image:
+            linear-gradient(180deg, rgba(31,46,22,0.55) 0%, rgba(31,46,22,0.72) 100%),
+            url('https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1200');
+          background-size: cover;
+          background-position: center 65%;
+          border-radius: 6px;
+          padding: 22px 22px 26px;
           overflow: hidden;
         }
-        .rr-hero-banner img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          filter: saturate(0.9) sepia(0.12);
+        .rr-hero-photo-overlay { display: none; }
+        .rr-hero-photo .rr-eyebrow,
+        .rr-hero-photo .rr-title,
+        .rr-hero-photo .rr-sub {
+          color: #F3F1DA;
         }
-        .rr-hero-banner-fade {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(31,46,22,0.15) 0%, rgba(228,226,180,0) 55%, var(--paper) 96%);
-        }
+        .rr-hero-photo .rr-title span { color: #E9C15A; }
+        .rr-hero-photo .rr-seal { color: #F3F1DA; opacity: 0.95; }
 
         .rr-hero {
           border-bottom: none;
@@ -1409,29 +1410,23 @@ export default function RegistroRuralSanJose() {
         }
       `}</style>
 
-      <div className="rr-hero-banner">
-        <img
-          src="https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1600"
-          alt="Campo de San José al atardecer"
-          loading="eager"
-        />
-        <div className="rr-hero-banner-fade" />
-      </div>
-
       <header className="rr-hero">
-        <div className="rr-hero-top">
-          <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
-          <BrandSeal size={58} />
+        <div className="rr-hero-photo">
+          <div className="rr-hero-photo-overlay" />
+          <div className="rr-hero-top">
+            <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
+            <BrandSeal size={58} />
+          </div>
+          <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
+          <p className="rr-sub">
+            Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
+            productores, empresas del agro y trabajadores autónomos del departamento.
+            Nada de lo que no sea del campo.
+          </p>
+          <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
+            <Plus size={16} /> Publicar un aviso
+          </button>
         </div>
-        <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
-        <p className="rr-sub">
-          Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
-          productores, empresas del agro y trabajadores autónomos del departamento.
-          Nada de lo que no sea del campo.
-        </p>
-        <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
-          <Plus size={16} /> Publicar un aviso
-        </button>
         <svg className="rr-fenceline" viewBox="0 0 800 34" preserveAspectRatio="none">
           <line x1="0" y1="24" x2="800" y2="24" stroke="currentColor" strokeWidth="1.5" />
           <line x1="0" y1="10" x2="800" y2="10" stroke="currentColor" strokeWidth="1" opacity="0.6" />
