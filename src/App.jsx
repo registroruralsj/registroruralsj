@@ -337,6 +337,8 @@ export default function RegistroRuralSanJose() {
   const [ratingSaving, setRatingSaving] = useState(false);
   const [ratingToast, setRatingToast] = useState(false);
   const [reviewsTarget, setReviewsTarget] = useState(null); // { contacto, nombre }
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteToast, setDeleteToast] = useState(false);
 
   useEffect(() => {
     try {
@@ -363,6 +365,13 @@ export default function RegistroRuralSanJose() {
     } catch (err) {
       setStorageOk(false);
     }
+  }
+
+  function deleteListing(id) {
+    persist(listings.filter((l) => l.id !== id));
+    setConfirmDeleteId(null);
+    setDeleteToast(true);
+    setTimeout(() => setDeleteToast(false), 2200);
   }
 
   function handleSubmit(e) {
@@ -951,6 +960,56 @@ export default function RegistroRuralSanJose() {
         }
         .rr-call-btn:hover { background: var(--stamp); color: var(--paper-card); }
 
+        .rr-delete-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          background: transparent;
+          border: none;
+          color: var(--ink-soft);
+          font-family: 'Public Sans', sans-serif;
+          font-size: 11.5px;
+          cursor: pointer;
+          padding: 2px 0;
+          align-self: flex-start;
+          text-decoration: underline;
+          text-decoration-color: transparent;
+          transition: color 0.15s ease, text-decoration-color 0.15s ease;
+        }
+        .rr-delete-link:hover { color: var(--stamp); text-decoration-color: var(--stamp); }
+        .rr-delete-confirm {
+          border: 1px dashed var(--stamp);
+          border-radius: 3px;
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .rr-delete-confirm span {
+          font-size: 12px;
+          color: var(--ink);
+          font-weight: 600;
+        }
+        .rr-delete-confirm-actions { display: flex; gap: 8px; }
+        .rr-delete-yes, .rr-delete-no {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 5px 10px;
+          border-radius: 3px;
+          cursor: pointer;
+        }
+        .rr-delete-yes {
+          background: var(--stamp);
+          border: 1px solid var(--stamp);
+          color: var(--paper-card);
+        }
+        .rr-delete-no {
+          background: transparent;
+          border: 1px solid var(--line);
+          color: var(--ink-soft);
+        }
+
         .rr-empty {
           padding: 60px 24px;
           text-align: center;
@@ -1426,6 +1485,27 @@ export default function RegistroRuralSanJose() {
                     <Phone size={14} /> Llamar
                   </a>
                 </div>
+                {confirmDeleteId === l.id ? (
+                  <div className="rr-delete-confirm">
+                    <span>¿Borrar este aviso?</span>
+                    <div className="rr-delete-confirm-actions">
+                      <button type="button" className="rr-delete-yes" onClick={() => deleteListing(l.id)}>
+                        Sí, borrar
+                      </button>
+                      <button type="button" className="rr-delete-no" onClick={() => setConfirmDeleteId(null)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="rr-delete-link"
+                    onClick={() => setConfirmDeleteId(l.id)}
+                  >
+                    <Trash2 size={12} /> Borrar mi aviso
+                  </button>
+                )}
               </div>
             );
           })}
@@ -1730,6 +1810,7 @@ export default function RegistroRuralSanJose() {
 
       {justPublished && <div className="rr-toast">✓ Aviso publicado</div>}
       {ratingToast && <div className="rr-toast">✓ Calificación guardada</div>}
+      {deleteToast && <div className="rr-toast">✓ Aviso borrado</div>}
     </div>
   );
 }
