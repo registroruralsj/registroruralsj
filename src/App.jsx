@@ -579,30 +579,40 @@ export default function RegistroRuralSanJose() {
         .rr-display { font-family: 'Libre Baskerville', serif; }
         .rr-mono { font-family: 'IBM Plex Mono', monospace; }
 
-        .rr-hero-banner {
-          position: relative;
-          width: 100%;
-          height: clamp(90px, 14vw, 160px);
-          overflow: hidden;
-        }
-        .rr-hero-banner img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          filter: saturate(0.9) sepia(0.12);
-        }
-        .rr-hero-banner-fade {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(31,46,22,0.15) 0%, rgba(228,226,180,0) 55%, var(--paper) 96%);
-        }
-
         .rr-hero {
           border-bottom: none;
           padding: 36px 24px 0;
           position: relative;
         }
+        .rr-hero-photo {
+          position: relative;
+          margin: 0 -24px 6px;
+          padding: 30px 24px 34px;
+          background-image:
+            linear-gradient(180deg, rgba(31,46,22,0.32) 0%, rgba(31,46,22,0.58) 65%, rgba(31,46,22,0.58) 100%),
+            url('https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1400');
+          background-size: cover;
+          background-position: center 55%;
+          overflow: hidden;
+        }
+        .rr-hero-photo::after {
+          content: "";
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          height: 46px;
+          background: linear-gradient(180deg, rgba(228,226,180,0) 0%, var(--paper) 100%);
+          pointer-events: none;
+        }
+        .rr-hero-photo .rr-eyebrow,
+        .rr-hero-photo .rr-title,
+        .rr-hero-photo .rr-sub {
+          color: #F3F1DA;
+          position: relative;
+          z-index: 1;
+        }
+        .rr-hero-photo .rr-title span { color: #E9C15A; }
+        .rr-hero-photo .rr-seal { color: #F3F1DA; opacity: 0.95; position: relative; z-index: 1; }
+        .rr-hero-photo .rr-cta { position: relative; z-index: 1; }
         .rr-hero-top {
           display: flex;
           align-items: flex-start;
@@ -1497,29 +1507,22 @@ export default function RegistroRuralSanJose() {
         }
       `}</style>
 
-      <div className="rr-hero-banner">
-        <img
-          src="https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1600"
-          alt="Campo de San José al atardecer"
-          loading="eager"
-        />
-        <div className="rr-hero-banner-fade" />
-      </div>
-
       <header className="rr-hero">
-        <div className="rr-hero-top">
-          <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
-          <BrandSeal size={58} />
+        <div className="rr-hero-photo">
+          <div className="rr-hero-top">
+            <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
+            <BrandSeal size={58} />
+          </div>
+          <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
+          <p className="rr-sub">
+            Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
+            productores, empresas del agro y trabajadores autónomos del departamento.
+            Nada de lo que no sea del campo.
+          </p>
+          <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
+            <Plus size={16} /> Publicar un aviso
+          </button>
         </div>
-        <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
-        <p className="rr-sub">
-          Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
-          productores, empresas del agro y trabajadores autónomos del departamento.
-          Nada de lo que no sea del campo.
-        </p>
-        <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
-          <Plus size={16} /> Publicar un aviso
-        </button>
         <svg className="rr-fenceline" viewBox="0 0 800 34" preserveAspectRatio="none">
           <line x1="0" y1="24" x2="800" y2="24" stroke="currentColor" strokeWidth="1.5" />
           <line x1="0" y1="10" x2="800" y2="10" stroke="currentColor" strokeWidth="1" opacity="0.6" />
