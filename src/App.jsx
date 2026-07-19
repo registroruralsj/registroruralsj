@@ -230,6 +230,29 @@ function isValidPhone(contacto) {
 const emptyRatingForm = { stars: 0, comment: "", nombre: "" };
 
 const MAX_FOTOS = 3;
+const RATE_LIMIT_KEY = "marketplace-publish-times-sanjose";
+const RATE_LIMIT_MAX = 5; // avisos nuevos permitidos por hora, por navegador
+
+// Freno básico contra spam automatizado: como cualquiera puede publicar sin
+// login, limitamos cuántos avisos nuevos puede cargar el mismo navegador por hora.
+function checkRateLimit() {
+  let times = [];
+  try {
+    times = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || "[]");
+  } catch (err) {
+    times = [];
+  }
+  const unaHoraAtras = Date.now() - 60 * 60 * 1000;
+  times = times.filter((t) => t > unaHoraAtras);
+  if (times.length >= RATE_LIMIT_MAX) return false;
+  times.push(Date.now());
+  try {
+    localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(times));
+  } catch (err) {
+    // si no se puede guardar, dejamos pasar la publicación igual
+  }
+  return true;
+}
 
 const emptyForm = {
   tipo: "ofrezco",
@@ -378,6 +401,16 @@ export default function RegistroRuralSanJose() {
   const [misAvisos, setMisAvisos] = useState([]); // ids de los avisos publicados desde este mismo navegador
   const [onlyMine, setOnlyMine] = useState(false);
   const [deleteToast, setDeleteToast] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [reportingId, setReportingId] = useState(null);
+  const [reportSent, setReportSent] = useState({}); // { [id]: true } — para no dejar reportar 2 veces seguidas en la misma sesión
+  const [reportToast, setReportToast] = useState(false);
+  const [resolvingId, setResolvingId] = useState(null);
+  const [filterZona, setFilterZona] = useState("todas");
+  const [sortBy, setSortBy] = useState("recientes");
+  const [visibleCount, setVisibleCount] = useState(9);
+  const [publishError, setPublishError] = useState("");
+  const [shareToast, setShareToast] = useState(false);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -414,6 +447,26 @@ export default function RegistroRuralSanJose() {
     cargarDatos();
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(9);
+  }, [filterCat, filterTipo, filterZona, query, onlyMine, sortBy]);
+
+  useEffect(() => {
+    if (loading || !listings.length) return;
+    const hash = window.location.hash;
+    if (hash.startsWith("#aviso-")) {
+      const id = hash.replace("#aviso-", "");
+      const el = document.getElementById(`aviso-${id}`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add("rr-card-highlight");
+          setTimeout(() => el.classList.remove("rr-card-highlight"), 2200);
+        }, 200);
+      }
+    }
+  }, [loading, listings]);
+
   function persist(next) {
     setListings(next);
   }
@@ -441,13 +494,95 @@ export default function RegistroRuralSanJose() {
     }
   }
 
+  function openEditForm(listing) {
+    const { id, fecha, estado, ...rest } = listing;
+    setForm({ ...emptyForm, ...rest, fotos: rest.fotos || [], video: rest.video || "" });
+    setEditingId(id);
+    setPhotoError("");
+    setVideoError("");
+    setPublishError("");
+    setShowForm(true);
+  }
+
+  async function toggleResolved(listing) {
+    const nuevoEstado = listing.estado === "resuelto" ? "activo" : "resuelto";
+    persist(listings.map((x) => (x.id === listing.id ? { ...x, estado: nuevoEstado } : x)));
+    setResolvingId(null);
+    try {
+      await supabase.from("listings").update({ estado: nuevoEstado }).eq("id", listing.id);
+    } catch (err) {
+      // si falla, se corrige solo al recargar la página
+    }
+  }
+
+  async function submitReport(id, motivo) {
+    setReportingId(null);
+    setReportSent((prev) => ({ ...prev, [id]: true }));
+    setReportToast(true);
+    setTimeout(() => setReportToast(false), 2500);
+    try {
+      await supabase.from("reports").insert({
+        id: `${Date.now()}`,
+        listing_id: id,
+        motivo,
+        fecha: new Date().toISOString(),
+      });
+    } catch (err) {
+      // el reporte no bloquea nada para quien lo hizo, aunque falle el guardado
+    }
+  }
+
+  function shareListing(l) {
+    const url = `${window.location.origin}${window.location.pathname}#aviso-${l.id}`;
+    const text = `Mirá este aviso en Registro Rural San José: "${l.titulo}"`;
+    if (navigator.share) {
+      navigator.share({ title: l.titulo, text, url }).catch(() => {});
+    } else {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => {
+          setShareToast(true);
+          setTimeout(() => setShareToast(false), 2200);
+        })
+        .catch(() => {});
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.titulo.trim() || !isValidPhone(form.contacto)) return;
+
+    if (editingId) {
+      setSaving(true);
+      persist(listings.map((l) => (l.id === editingId ? { ...l, ...form } : l)));
+      try {
+        const { error } = await supabase.from("listings").update(form).eq("id", editingId);
+        if (error) throw error;
+        setStorageOk(true);
+      } catch (err) {
+        setStorageOk(false);
+      }
+      setEditingId(null);
+      setSaving(false);
+      setForm(emptyForm);
+      setJustPublished(true);
+      setTimeout(() => setJustPublished(false), 2200);
+      setShowForm(false);
+      return;
+    }
+
+    if (!checkRateLimit()) {
+      setPublishError(
+        `Ya publicaste varios avisos en la última hora (máximo ${RATE_LIMIT_MAX}). Esperá un rato antes de publicar otro — es para evitar spam.`
+      );
+      return;
+    }
+    setPublishError("");
     setSaving(true);
     const nuevo = {
       id: `${Date.now()}`,
       ...form,
+      estado: "activo",
       fecha: new Date().toISOString(),
     };
     persist([nuevo, ...listings]);
@@ -570,18 +705,40 @@ export default function RegistroRuralSanJose() {
     return entry ? entry.reviews : [];
   }
 
-  const filtered = listings.filter((l) => {
-    if (onlyMine && !misAvisos.includes(l.id)) return false;
-    if (filterCat !== "todos" && l.categoria !== filterCat) return false;
-    if (filterTipo !== "todos" && l.tipo !== filterTipo) return false;
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      if (!l.titulo.toLowerCase().includes(q) && !l.descripcion.toLowerCase().includes(q) && !l.zona.toLowerCase().includes(q)) {
-        return false;
+  function precioNumerico(precio) {
+    if (!precio) return null;
+    const n = parseFloat(String(precio).replace(/[^\d.,]/g, "").replace(",", "."));
+    return isNaN(n) ? null : n;
+  }
+
+  const filtered = listings
+    .filter((l) => {
+      if (onlyMine && !misAvisos.includes(l.id)) return false;
+      if (!onlyMine && l.estado === "resuelto") return false;
+      if (filterCat !== "todos" && l.categoria !== filterCat) return false;
+      if (filterTipo !== "todos" && l.tipo !== filterTipo) return false;
+      if (filterZona !== "todas" && l.zona !== filterZona) return false;
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        if (!l.titulo.toLowerCase().includes(q) && !l.descripcion.toLowerCase().includes(q) && !l.zona.toLowerCase().includes(q)) {
+          return false;
+        }
       }
-    }
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "precio_asc" || sortBy === "precio_desc") {
+        const pa = precioNumerico(a.precio);
+        const pb = precioNumerico(b.precio);
+        if (pa === null && pb === null) return 0;
+        if (pa === null) return 1;
+        if (pb === null) return -1;
+        return sortBy === "precio_asc" ? pa - pb : pb - pa;
+      }
+      return new Date(b.fecha) - new Date(a.fecha);
+    });
+
+  const visibleListings = filtered.slice(0, visibleCount);
 
   return (
     <div className="rr-root">
@@ -817,6 +974,158 @@ export default function RegistroRuralSanJose() {
           background: var(--stamp);
           border-color: var(--stamp);
           color: var(--paper-card);
+        }
+
+        .rr-filters-row {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          padding: 0 24px 14px;
+        }
+        .rr-select-inline {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12.5px;
+          color: var(--ink);
+          background: var(--paper-card);
+          border: 1px solid var(--line);
+          border-radius: 3px;
+          padding: 7px 10px;
+          cursor: pointer;
+        }
+
+        .rr-skeleton {
+          background: var(--paper-card);
+          border: 1px solid var(--line);
+          border-radius: 4px;
+          padding: 18px;
+        }
+        .rr-skeleton-photo {
+          aspect-ratio: 4 / 3;
+          margin: -18px -18px 12px;
+          background: linear-gradient(90deg, var(--line) 25%, rgba(0,0,0,0.06) 37%, var(--line) 63%);
+          background-size: 400% 100%;
+          animation: rr-shimmer 1.4s ease infinite;
+        }
+        .rr-skeleton-line {
+          height: 10px;
+          border-radius: 2px;
+          margin-bottom: 8px;
+          background: linear-gradient(90deg, var(--line) 25%, rgba(0,0,0,0.06) 37%, var(--line) 63%);
+          background-size: 400% 100%;
+          animation: rr-shimmer 1.4s ease infinite;
+        }
+        @keyframes rr-shimmer {
+          0% { background-position: 100% 0; }
+          100% { background-position: 0 0; }
+        }
+
+        .rr-mostrar-mas-wrap {
+          display: flex;
+          justify-content: center;
+          padding: 4px 24px 32px;
+        }
+        .rr-mostrar-mas {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--ink);
+          background: var(--paper-card);
+          border: 1px solid var(--line);
+          border-radius: 3px;
+          padding: 10px 20px;
+          cursor: pointer;
+        }
+        .rr-mostrar-mas:hover { border-color: var(--stamp); color: var(--stamp); }
+
+        .rr-card-resuelto { opacity: 0.68; }
+        .rr-resuelto-ribbon {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: var(--ink);
+          color: var(--paper-card);
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          padding: 4px 9px;
+          border-radius: 3px;
+          z-index: 2;
+        }
+        .rr-card-highlight {
+          outline: 2px solid var(--gold);
+          outline-offset: 3px;
+        }
+
+        .rr-card-utility-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .rr-utility-link {
+          background: transparent;
+          border: none;
+          padding: 0;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 11.5px;
+          color: var(--ink-soft);
+          cursor: pointer;
+          text-decoration: underline;
+          text-decoration-color: transparent;
+          transition: color 0.15s ease, text-decoration-color 0.15s ease;
+        }
+        .rr-utility-link:hover { color: var(--stamp); text-decoration-color: var(--stamp); }
+        .rr-utility-muted { text-decoration: none; cursor: default; color: var(--ink-soft); opacity: 0.7; }
+
+        .rr-report-picker {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .rr-report-picker button {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 11px;
+          padding: 4px 8px;
+          border-radius: 3px;
+          border: 1px solid var(--line);
+          background: var(--paper-card);
+          color: var(--ink-soft);
+          cursor: pointer;
+        }
+        .rr-report-picker button:hover { border-color: var(--stamp); color: var(--stamp); }
+        .rr-report-cancel { opacity: 0.7; }
+
+        .rr-owner-row {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          border-top: 1px dashed var(--line);
+          padding-top: 10px;
+        }
+        .rr-owner-link {
+          align-self: flex-start;
+          background: transparent;
+          border: none;
+          padding: 0;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 11.5px;
+          font-weight: 600;
+          color: var(--green);
+          cursor: pointer;
+          text-decoration: underline;
+          text-decoration-color: transparent;
+        }
+        .rr-owner-link:hover { text-decoration-color: var(--green); }
+
+        .rr-publish-error {
+          background: #F3E7D8;
+          border: 1px solid var(--gold);
+          border-radius: 3px;
+          padding: 10px 12px;
+          font-size: 12.5px;
+          color: var(--ink);
+          margin-bottom: 14px;
         }
 
         .rr-tabs {
@@ -1554,7 +1863,7 @@ export default function RegistroRuralSanJose() {
             productores, empresas del agro y trabajadores autónomos del departamento.
             Nada de lo que no sea del campo.
           </p>
-          <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
+          <button className="rr-cta" onClick={() => { setPhotoError(""); setVideoError(""); setPublishError(""); setEditingId(null); setForm(emptyForm); setShowForm(true); }}>
             <Plus size={16} /> Publicar un aviso
           </button>
         </div>
@@ -1641,8 +1950,31 @@ export default function RegistroRuralSanJose() {
         <button className={filterTipo === "busco" ? "active" : ""} onClick={() => setFilterTipo("busco")}>BUSCO</button>
       </div>
 
+      <div className="rr-filters-row">
+        <select className="rr-select-inline" value={filterZona} onChange={(e) => setFilterZona(e.target.value)}>
+          <option value="todas">Todas las zonas</option>
+          {ZONAS.map((z) => (
+            <option key={z} value={z}>{z}</option>
+          ))}
+        </select>
+        <select className="rr-select-inline" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="recientes">Más recientes</option>
+          <option value="precio_asc">Precio: menor a mayor</option>
+          <option value="precio_desc">Precio: mayor a menor</option>
+        </select>
+      </div>
+
       {loading ? (
-        <div className="rr-empty">Cargando avisos...</div>
+        <div className="rr-grid">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div className="rr-skeleton" key={i}>
+              <div className="rr-skeleton-photo" />
+              <div className="rr-skeleton-line" style={{ width: "70%" }} />
+              <div className="rr-skeleton-line" style={{ width: "45%" }} />
+              <div className="rr-skeleton-line" style={{ width: "90%" }} />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="rr-empty">
           {onlyMine ? (
@@ -1659,7 +1991,7 @@ export default function RegistroRuralSanJose() {
         </div>
       ) : (
         <div className="rr-grid">
-          {filtered.map((l) => {
+          {visibleListings.map((l) => {
             const cat = CATEGORIES.find((c) => c.id === l.categoria);
             const Icon = cat ? cat.icon : IconGanado;
             const waNumber = normalizeContact(l.contacto).replace(/^0/, "");
@@ -1670,7 +2002,8 @@ export default function RegistroRuralSanJose() {
             // Compatibilidad con avisos viejos que tenían una sola "foto" en vez de "fotos".
             const fotos = l.fotos && l.fotos.length ? l.fotos : l.foto ? [l.foto] : [];
             return (
-              <div className="rr-card" key={l.id}>
+              <div className={`rr-card ${l.estado === "resuelto" ? "rr-card-resuelto" : ""}`} key={l.id} id={`aviso-${l.id}`}>
+                {l.estado === "resuelto" && <div className="rr-resuelto-ribbon">Resuelto</div>}
                 {fotos.length > 0 && (
                   <div className="rr-card-photo">
                     <img src={fotos[0]} alt={l.titulo} loading="lazy" />
@@ -1733,32 +2066,70 @@ export default function RegistroRuralSanJose() {
                     <Phone size={14} /> Llamar
                   </a>
                 </div>
-                {misAvisos.includes(l.id) && (
-                  confirmDeleteId === l.id ? (
-                    <div className="rr-delete-confirm">
-                      <span>¿Borrar este aviso?</span>
-                      <div className="rr-delete-confirm-actions">
-                        <button type="button" className="rr-delete-yes" onClick={() => deleteListing(l.id)}>
-                          Sí, borrar
-                        </button>
-                        <button type="button" className="rr-delete-no" onClick={() => setConfirmDeleteId(null)}>
-                          Cancelar
-                        </button>
-                      </div>
+
+                <div className="rr-card-utility-row">
+                  <button type="button" className="rr-utility-link" onClick={() => shareListing(l)}>
+                    Compartir
+                  </button>
+                  {reportSent[l.id] ? (
+                    <span className="rr-utility-link rr-utility-muted">Reportado, gracias</span>
+                  ) : reportingId === l.id ? (
+                    <div className="rr-report-picker">
+                      <button type="button" onClick={() => submitReport(l.id, "spam")}>Spam</button>
+                      <button type="button" onClick={() => submitReport(l.id, "falso")}>Contenido falso</button>
+                      <button type="button" onClick={() => submitReport(l.id, "precio")}>Precio abusivo</button>
+                      <button type="button" onClick={() => submitReport(l.id, "otro")}>Otro</button>
+                      <button type="button" className="rr-report-cancel" onClick={() => setReportingId(null)}>Cancelar</button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      className="rr-delete-link"
-                      onClick={() => setConfirmDeleteId(l.id)}
-                    >
-                      <Trash2 size={12} /> Borrar mi aviso
+                    <button type="button" className="rr-utility-link" onClick={() => setReportingId(l.id)}>
+                      Reportar
                     </button>
-                  )
+                  )}
+                </div>
+
+                {misAvisos.includes(l.id) && (
+                  <div className="rr-owner-row">
+                    <button type="button" className="rr-owner-link" onClick={() => openEditForm(l)}>
+                      Editar
+                    </button>
+                    <button type="button" className="rr-owner-link" onClick={() => toggleResolved(l)}>
+                      {l.estado === "resuelto" ? "Reactivar aviso" : "Marcar como resuelto"}
+                    </button>
+                    {confirmDeleteId === l.id ? (
+                      <div className="rr-delete-confirm">
+                        <span>¿Borrar este aviso?</span>
+                        <div className="rr-delete-confirm-actions">
+                          <button type="button" className="rr-delete-yes" onClick={() => deleteListing(l.id)}>
+                            Sí, borrar
+                          </button>
+                          <button type="button" className="rr-delete-no" onClick={() => setConfirmDeleteId(null)}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rr-delete-link"
+                        onClick={() => setConfirmDeleteId(l.id)}
+                      >
+                        <Trash2 size={12} /> Borrar mi aviso
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {!loading && filtered.length > visibleCount && (
+        <div className="rr-mostrar-mas-wrap">
+          <button className="rr-mostrar-mas" onClick={() => setVisibleCount((v) => v + 9)}>
+            Mostrar más avisos ({filtered.length - visibleCount} más)
+          </button>
         </div>
       )}
 
@@ -1781,13 +2152,15 @@ export default function RegistroRuralSanJose() {
       </footer>
 
       {showForm && (
-        <div className="rr-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
+        <div className="rr-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setEditingId(null); } }}>
           <div className="rr-modal">
-            <button className="rr-modal-close" onClick={() => setShowForm(false)} aria-label="Cerrar">
+            <button className="rr-modal-close" onClick={() => { setShowForm(false); setEditingId(null); }} aria-label="Cerrar">
               <X size={20} />
             </button>
-            <h2>Publicar un aviso</h2>
-            <p className="rr-modal-sub">Va a quedar visible para todos los que visiten esta página.</p>
+            <h2>{editingId ? "Editar aviso" : "Publicar un aviso"}</h2>
+            <p className="rr-modal-sub">
+              {editingId ? "Los cambios se guardan sobre el mismo aviso." : "Va a quedar visible para todos los que visiten esta página."}
+            </p>
             <form onSubmit={handleSubmit}>
               <div className="rr-field">
                 <label>¿Ofrecés o buscás?</label>
@@ -1947,8 +2320,10 @@ export default function RegistroRuralSanJose() {
                 <span className="rr-field-hint">Solo números, sin +598. Ej: 099123456</span>
               </div>
 
+              {publishError && <div className="rr-publish-error">{publishError}</div>}
+
               <button className="rr-submit" type="submit" disabled={saving || !isValidPhone(form.contacto)}>
-                {saving ? "Publicando..." : "Publicar aviso"}
+                {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Publicar aviso"}
               </button>
             </form>
           </div>
@@ -2066,6 +2441,8 @@ export default function RegistroRuralSanJose() {
       {justPublished && <div className="rr-toast">✓ Aviso publicado</div>}
       {ratingToast && <div className="rr-toast">✓ Calificación guardada</div>}
       {deleteToast && <div className="rr-toast">✓ Aviso borrado</div>}
+      {shareToast && <div className="rr-toast">✓ Link copiado</div>}
+      {reportToast && <div className="rr-toast">✓ Gracias, reportamos tu aviso</div>}
     </div>
   );
 }
