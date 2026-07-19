@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, Plus, X, MapPin, MessageCircle, Phone, Star, ImagePlus, Trash2, Video } from "lucide-react";
 import { supabase } from "./supabaseClient";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 
 /* Iconos de línea dibujados a medida — nada de librería genérica, para que cada
    categoría se sienta propia del campo y no de un marketplace cualquiera. */
@@ -179,6 +180,64 @@ function CampoBanner() {
   );
 }
 
+// Mapa interactivo de Leaflet con los avisos agrupados por zona
+function MapaAvisos({ listings }) {
+  const porZona = useMemo(() => {
+    const acc = {};
+    for (const l of listings) {
+      if (l.estado === "resuelto") continue;
+      const coords = ZONA_COORDS[l.zona];
+      if (!coords) continue;
+      if (!acc[l.zona]) acc[l.zona] = { coords, avisos: [] };
+      acc[l.zona].avisos.push(l);
+    }
+    return Object.values(acc);
+  }, [listings]);
+
+  if (!porZona.length) return null;
+
+  return (
+    <div className="rr-mapa-leaflet-wrap">
+      <h2 className="rr-mapa-title">Avisos por zona</h2>
+      <MapContainer
+        center={[-34.33, -56.85]}
+        zoom={9}
+        scrollWheelZoom={false}
+        className="rr-mapa-leaflet"
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='© OpenStreetMap'
+        />
+        {porZona.map(({ coords, avisos }) => (
+          <CircleMarker
+            key={avisos[0].zona}
+            center={coords}
+            radius={Math.min(8 + avisos.length * 3, 24)}
+            pathOptions={{ color: "#8C3A1E", fillColor: "#8C3A1E", fillOpacity: 0.82, weight: 1.5 }}
+          >
+            <Popup>
+              <div className="rr-mapa-popup">
+                <strong>{avisos[0].zona}</strong>
+                <span>{avisos.length} {avisos.length === 1 ? "aviso" : "avisos"}</span>
+                <ul>
+                  {avisos.slice(0, 5).map((a) => (
+                    <li key={a.id}>
+                      <a href={`#aviso-${a.id}`}>{a.titulo}</a>
+                    </li>
+                  ))}
+                  {avisos.length > 5 && <li>y {avisos.length - 5} más...</li>}
+                </ul>
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+    </div>
+  );
+}
+
 // Mapa simplificado y dibujado a mano (no es cartografía exacta) para ubicar
 // San José dentro de Uruguay de un vistazo.
 function MapaUruguay({ size = 130 }) {
@@ -215,6 +274,21 @@ const ZONAS = [
   "Mal Abrigo", "Puntas de Valdez", "Villa Rodríguez", "Rafael Perazza",
   "Cañada Grande", "Otra zona del departamento",
 ];
+
+// Coordenadas aproximadas de cada zona del departamento para el mapa
+const ZONA_COORDS = {
+  "San José de Mayo":       [-34.337, -56.714],
+  "Libertad":               [-34.638, -56.619],
+  "Ecilda Paullier":        [-34.315, -57.100],
+  "Rodríguez":              [-34.060, -56.993],
+  "Raigón":                 [-34.187, -56.710],
+  "Mal Abrigo":             [-34.255, -57.239],
+  "Puntas de Valdez":       [-34.080, -56.655],
+  "Villa Rodríguez":        [-34.060, -56.420],
+  "Rafael Perazza":         [-34.043, -57.037],
+  "Cañada Grande":          [-34.440, -57.005],
+  "Otra zona del departamento": [-34.337, -56.714],
+};
 
 const MIS_AVISOS_KEY = "marketplace-mis-avisos-sanjose";
 
@@ -1667,6 +1741,46 @@ export default function RegistroRuralSanJose() {
         .rr-submit:hover { background: var(--green-soft); }
         .rr-submit:disabled { opacity: 0.6; cursor: default; }
 
+        .rr-mapa-leaflet-wrap {
+          padding: 28px 24px 8px;
+        }
+        .rr-mapa-title {
+          font-family: 'Libre Baskerville', serif;
+          font-size: 18px;
+          font-weight: 700;
+          margin: 0 0 14px;
+          color: var(--ink);
+        }
+        .rr-mapa-leaflet {
+          width: 100%;
+          height: 340px;
+          border-radius: 6px;
+          border: 1px solid var(--line);
+          z-index: 0;
+        }
+        .rr-mapa-popup strong {
+          display: block;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          margin-bottom: 2px;
+          color: var(--ink);
+        }
+        .rr-mapa-popup span {
+          display: block;
+          font-size: 11px;
+          color: var(--ink-soft);
+          margin-bottom: 6px;
+        }
+        .rr-mapa-popup ul {
+          margin: 0;
+          padding: 0 0 0 14px;
+          font-size: 12px;
+          color: var(--ink);
+        }
+        .rr-mapa-popup ul li { margin-bottom: 2px; }
+        .rr-mapa-popup ul a { color: var(--stamp); text-decoration: none; }
+        .rr-mapa-popup ul a:hover { text-decoration: underline; }
+
         .rr-region {
           display: flex;
           align-items: center;
@@ -1777,6 +1891,32 @@ export default function RegistroRuralSanJose() {
           line-height: 1.55;
           color: var(--ink-soft);
           margin: 0;
+        }
+
+        .rr-actividad {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 24px;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12.5px;
+          color: var(--ink-soft);
+          border-top: 1px dashed var(--line);
+          border-bottom: 1px dashed var(--line);
+          margin-bottom: 4px;
+        }
+        .rr-actividad strong { color: var(--ink); }
+        .rr-actividad-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #4CAF50;
+          flex-shrink: 0;
+          animation: rr-pulse 2s ease-in-out infinite;
+        }
+        @keyframes rr-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.85); }
         }
 
         .rr-warn {
@@ -1901,6 +2041,16 @@ export default function RegistroRuralSanJose() {
           </div>
         </div>
       </section>
+
+      {!loading && listings.length > 0 && (() => {
+        const ultimo = listings.reduce((a, b) => new Date(a.fecha) > new Date(b.fecha) ? a : b);
+        return (
+          <div className="rr-actividad">
+            <span className="rr-actividad-dot" />
+            Último aviso publicado <strong>{timeAgo(ultimo.fecha)}</strong> — "{ultimo.titulo}"
+          </div>
+        );
+      })()}
 
       {!storageOk && (
         <div className="rr-warn">
@@ -2132,6 +2282,8 @@ export default function RegistroRuralSanJose() {
           </button>
         </div>
       )}
+
+      {!loading && listings.length > 0 && <MapaAvisos listings={listings} />}
 
       <div className="rr-region">
         <img className="rr-region-escudo" src={`${import.meta.env.BASE_URL}images/escudo-sanjose.png`} alt="Escudo de San José de Mayo" />
