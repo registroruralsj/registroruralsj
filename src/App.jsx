@@ -393,6 +393,9 @@ function seedListings() {
       precio: "A convenir por cabeza",
       nombre: "Walter",
       contacto: "099123456",
+      estado: "activo",
+      fotos: [],
+      video: "",
       fecha: new Date(now - 86400000 * 2).toISOString(),
     },
     {
@@ -405,6 +408,9 @@ function seedListings() {
       precio: "US$ 15 / hectárea",
       nombre: "Rodrigo",
       contacto: "098765432",
+      estado: "activo",
+      fotos: [],
+      video: "",
       fecha: new Date(now - 86400000 * 5).toISOString(),
     },
     {
@@ -417,6 +423,9 @@ function seedListings() {
       precio: "Consultar precio de mercado",
       nombre: "Marcelo",
       contacto: "091234567",
+      estado: "activo",
+      fotos: [],
+      video: "",
       fecha: new Date(now - 86400000).toISOString(),
     },
   ];
