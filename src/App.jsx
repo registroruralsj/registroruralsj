@@ -291,6 +291,8 @@ const ZONA_COORDS = {
 };
 
 const MIS_AVISOS_KEY = "marketplace-mis-avisos-sanjose";
+const GUARDADOS_KEY = "marketplace-guardados-sanjose";
+const PUSH_ASKED_KEY = "marketplace-push-asked-sanjose";
 
 function normalizeContact(contacto) {
   return (contacto || "").replace(/\D/g, "");
@@ -436,7 +438,28 @@ function seedRatings() {
   };
 }
 
-// Convierte las filas planas que llegan de Supabase (una fila por calificación)
+// ─── BANNER PUBLICITARIO ────────────────────────────────────────────────────
+// Para agregar o cambiar el anunciante, editá estas líneas. Si no querés
+// mostrar ningún banner, poné BANNER_ACTIVO = false.
+const BANNER_ACTIVO = true;
+const BANNER = {
+  empresa: "Tu empresa aquí",
+  eslogan: "Anunciá tu agroveterinaria, semillería o servicio rural en esta página.",
+  url: null, // null o "https://tu-link.com"
+  telefono: null, // null o "099123456"
+  etiqueta: "Espacio publicitario disponible",
+};
+
+// ─── ACERCA DE ──────────────────────────────────────────────────────────────
+const ACERCA_DE = `Registro Rural San José es una plataforma gratuita creada para conectar a productores, trabajadores autónomos y empresas del agro del Departamento de San José, Uruguay.
+
+Acá podés publicar o encontrar avisos de servicios rurales, maquinaria agrícola, insumos, ganado y campos. No cobramos comisión por ninguna operación: el trato se cierra directamente entre las partes por WhatsApp o teléfono.
+
+Nació con el objetivo de darle visibilidad a la actividad rural del departamento — desde el pequeño productor familiar hasta la empresa agropecuaria — en un solo lugar, simple y sin burocracia.
+
+Si querés publicar un aviso de tu negocio o aparecer como anunciante en esta página, escribinos al WhatsApp del administrador.`;
+
+// Convierte las filas planas que llegan de Supabase
 // a la forma agrupada por contacto que usa el resto de la app.
 function groupRatings(rows) {
   const grouped = {};
@@ -473,7 +496,11 @@ export default function RegistroRuralSanJose() {
   const [reviewsTarget, setReviewsTarget] = useState(null); // { contacto, nombre }
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [misAvisos, setMisAvisos] = useState([]); // ids de los avisos publicados desde este mismo navegador
+  const [guardados, setGuardados] = useState([]);
   const [onlyMine, setOnlyMine] = useState(false);
+  const [onlyGuardados, setOnlyGuardados] = useState(false);
+  const [activeView, setActiveView] = useState("avisos"); // "avisos" | "acerca"
+  const [pushGranted, setPushGranted] = useState(false);
   const [deleteToast, setDeleteToast] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [reportingId, setReportingId] = useState(null);
@@ -516,6 +543,15 @@ export default function RegistroRuralSanJose() {
       } catch (err) {
         setMisAvisos([]);
       }
+      try {
+        const raw = localStorage.getItem(GUARDADOS_KEY);
+        setGuardados(raw ? JSON.parse(raw) : []);
+      } catch (err) {
+        setGuardados([]);
+      }
+      if ("Notification" in window) {
+        setPushGranted(Notification.permission === "granted");
+      }
       setLoading(false);
     }
     cargarDatos();
@@ -523,7 +559,7 @@ export default function RegistroRuralSanJose() {
 
   useEffect(() => {
     setVisibleCount(9);
-  }, [filterCat, filterTipo, filterZona, query, onlyMine, sortBy]);
+  }, [filterCat, filterTipo, filterZona, query, onlyMine, onlyGuardados, sortBy]);
 
   useEffect(() => {
     if (loading || !listings.length) return;
@@ -606,6 +642,29 @@ export default function RegistroRuralSanJose() {
     }
   }
 
+  function toggleGuardado(id) {
+    const next = guardados.includes(id)
+      ? guardados.filter((g) => g !== id)
+      : [...guardados, id];
+    setGuardados(next);
+    try { localStorage.setItem(GUARDADOS_KEY, JSON.stringify(next)); } catch (err) {}
+  }
+
+  async function pedirPermisoNotificaciones() {
+    if (!("Notification" in window)) return;
+    const result = await Notification.requestPermission();
+    setPushGranted(result === "granted");
+    try { localStorage.setItem(PUSH_ASKED_KEY, "1"); } catch (err) {}
+  }
+
+  function notificarNuevoAviso(aviso) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    new Notification("Nuevo aviso en Registro Rural San José", {
+      body: `${aviso.tipo === "busco" ? "Busco" : "Ofrezco"}: ${aviso.titulo} · ${aviso.zona}`,
+      icon: "./favicon-192.png",
+    });
+  }
+
   function shareListing(l) {
     const url = `${window.location.origin}${window.location.pathname}#aviso-${l.id}`;
     const text = `Mirá este aviso en Registro Rural San José: "${l.titulo}"`;
@@ -670,6 +729,7 @@ export default function RegistroRuralSanJose() {
     }
     setSaving(false);
     setForm(emptyForm);
+    notificarNuevoAviso(nuevo);
     setJustPublished(true);
     setTimeout(() => setJustPublished(false), 2200);
     setShowForm(false);
@@ -787,8 +847,9 @@ export default function RegistroRuralSanJose() {
 
   const filtered = listings
     .filter((l) => {
+      if (onlyGuardados && !guardados.includes(l.id)) return false;
       if (onlyMine && !misAvisos.includes(l.id)) return false;
-      if (!onlyMine && l.estado === "resuelto") return false;
+      if (!onlyMine && !onlyGuardados && l.estado === "resuelto") return false;
       if (filterCat !== "todos" && l.categoria !== filterCat) return false;
       if (filterTipo !== "todos" && l.tipo !== filterTipo) return false;
       if (filterZona !== "todas" && l.zona !== filterZona) return false;
@@ -1781,6 +1842,117 @@ export default function RegistroRuralSanJose() {
         .rr-mapa-popup ul a { color: var(--stamp); text-decoration: none; }
         .rr-mapa-popup ul a:hover { text-decoration: underline; }
 
+        .rr-controls-right {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+        }
+        .rr-push-btn { border-color: var(--green) !important; color: var(--green) !important; }
+        .rr-push-active {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12px;
+          color: var(--green);
+        }
+        .rr-guardado-active { color: var(--stamp) !important; }
+
+        .rr-cta-row {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap;
+          position: relative;
+          z-index: 1;
+        }
+        .rr-acerca-link {
+          background: transparent;
+          border: none;
+          color: rgba(243,241,218,0.8);
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          cursor: pointer;
+          text-decoration: underline;
+          text-decoration-color: transparent;
+          padding: 0;
+        }
+        .rr-acerca-link:hover { text-decoration-color: currentColor; }
+
+        .rr-acerca {
+          padding: 28px 24px 16px;
+          max-width: 680px;
+          margin: 0 auto;
+        }
+        .rr-acerca-title {
+          font-family: 'Libre Baskerville', serif;
+          font-size: 20px;
+          font-weight: 700;
+          margin: 0 0 16px;
+          color: var(--ink);
+        }
+        .rr-acerca p {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 14px;
+          line-height: 1.7;
+          color: var(--ink-soft);
+          margin: 0 0 12px;
+        }
+
+        .rr-banner-ad {
+          position: relative;
+          margin: 0 24px 24px;
+          border: 1px solid var(--gold);
+          border-radius: 5px;
+          background: linear-gradient(135deg, #fdfbf0 0%, #f7f4d8 100%);
+          padding: 16px 18px;
+        }
+        .rr-banner-label {
+          position: absolute;
+          top: -9px;
+          left: 14px;
+          background: var(--gold);
+          color: var(--ink);
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9.5px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          padding: 2px 8px;
+          border-radius: 2px;
+        }
+        .rr-banner-content strong {
+          display: block;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--ink);
+          margin-bottom: 4px;
+        }
+        .rr-banner-content p {
+          font-family: 'Public Sans', sans-serif;
+          font-size: 13px;
+          color: var(--ink-soft);
+          margin: 0 0 12px;
+          line-height: 1.5;
+        }
+        .rr-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .rr-banner-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-family: 'Public Sans', sans-serif;
+          font-size: 12.5px;
+          font-weight: 600;
+          padding: 7px 14px;
+          border-radius: 3px;
+          border: 1px solid var(--gold);
+          color: var(--ink);
+          background: transparent;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .rr-banner-btn:hover { background: var(--gold); }
+        .rr-banner-btn-wa { border-color: var(--green); color: var(--green); }
+        .rr-banner-btn-wa:hover { background: var(--green); color: var(--paper-card); }
+
         .rr-region {
           display: flex;
           align-items: center;
@@ -2003,9 +2175,14 @@ export default function RegistroRuralSanJose() {
             productores, empresas del agro y trabajadores autónomos del departamento.
             Nada de lo que no sea del campo.
           </p>
-          <button className="rr-cta" onClick={() => { setPhotoError(""); setVideoError(""); setPublishError(""); setEditingId(null); setForm(emptyForm); setShowForm(true); }}>
-            <Plus size={16} /> Publicar un aviso
-          </button>
+          <div className="rr-cta-row">
+            <button className="rr-cta" onClick={() => { setPhotoError(""); setVideoError(""); setPublishError(""); setEditingId(null); setForm(emptyForm); setShowForm(true); }}>
+              <Plus size={16} /> Publicar un aviso
+            </button>
+            <button className="rr-acerca-link" onClick={() => setActiveView((v) => v === "acerca" ? "avisos" : "acerca")}>
+              {activeView === "acerca" ? "← Volver a los avisos" : "¿Qué es esto?"}
+            </button>
+          </div>
         </div>
         <svg className="rr-fenceline" viewBox="0 0 800 34" preserveAspectRatio="none">
           <line x1="0" y1="24" x2="800" y2="24" stroke="currentColor" strokeWidth="1.5" />
@@ -2068,12 +2245,28 @@ export default function RegistroRuralSanJose() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <button
-          className={`rr-mine-btn ${onlyMine ? "active" : ""}`}
-          onClick={() => setOnlyMine((v) => !v)}
-        >
-          Mis avisos {misAvisos.length > 0 && `(${misAvisos.length})`}
-        </button>
+        <div className="rr-controls-right">
+          <button
+            className={`rr-mine-btn ${onlyMine ? "active" : ""}`}
+            onClick={() => { setOnlyMine((v) => !v); setOnlyGuardados(false); }}
+          >
+            Mis avisos {misAvisos.length > 0 && `(${misAvisos.length})`}
+          </button>
+          <button
+            className={`rr-mine-btn ${onlyGuardados ? "active" : ""}`}
+            onClick={() => { setOnlyGuardados((v) => !v); setOnlyMine(false); }}
+          >
+            ♥ Guardados {guardados.length > 0 && `(${guardados.length})`}
+          </button>
+          {"Notification" in window && !pushGranted && (
+            <button className="rr-mine-btn rr-push-btn" onClick={pedirPermisoNotificaciones}>
+              🔔 Avisos nuevos
+            </button>
+          )}
+          {pushGranted && (
+            <span className="rr-push-active">🔔 Notificaciones activas</span>
+          )}
+        </div>
       </div>
 
       <div className="rr-tabs">
@@ -2221,6 +2414,13 @@ export default function RegistroRuralSanJose() {
                   <button type="button" className="rr-utility-link" onClick={() => shareListing(l)}>
                     Compartir
                   </button>
+                  <button
+                    type="button"
+                    className={`rr-utility-link ${guardados.includes(l.id) ? "rr-guardado-active" : ""}`}
+                    onClick={() => toggleGuardado(l.id)}
+                  >
+                    {guardados.includes(l.id) ? "♥ Guardado" : "♡ Guardar"}
+                  </button>
                   {reportSent[l.id] ? (
                     <span className="rr-utility-link rr-utility-muted">Reportado, gracias</span>
                   ) : reportingId === l.id ? (
@@ -2284,6 +2484,42 @@ export default function RegistroRuralSanJose() {
       )}
 
       {!loading && listings.length > 0 && <MapaAvisos listings={listings} />}
+
+      {activeView === "acerca" && (
+        <section className="rr-acerca">
+          <h2 className="rr-acerca-title">Sobre Registro Rural San José</h2>
+          {ACERCA_DE.split("\n\n").map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </section>
+      )}
+
+      {BANNER_ACTIVO && (
+        <div className="rr-banner-ad">
+          <span className="rr-banner-label">{BANNER.etiqueta}</span>
+          <div className="rr-banner-content">
+            <strong>{BANNER.empresa}</strong>
+            <p>{BANNER.eslogan}</p>
+            <div className="rr-banner-actions">
+              {BANNER.url && (
+                <a href={BANNER.url} target="_blank" rel="noopener noreferrer" className="rr-banner-btn">
+                  Ver más
+                </a>
+              )}
+              {BANNER.telefono && (
+                <a href={`https://wa.me/598${BANNER.telefono.replace(/^0/, "")}`} target="_blank" rel="noopener noreferrer" className="rr-banner-btn rr-banner-btn-wa">
+                  <MessageCircle size={14} /> WhatsApp
+                </a>
+              )}
+              {!BANNER.url && !BANNER.telefono && (
+                <a href="mailto:registroruralsj@gmail.com" className="rr-banner-btn">
+                  Contactar para anunciar
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rr-region">
         <img className="rr-region-escudo" src={`${import.meta.env.BASE_URL}images/escudo-sanjose.png`} alt="Escudo de San José de Mayo" />
