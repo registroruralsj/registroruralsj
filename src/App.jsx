@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, Plus, X, MapPin, MessageCircle, Phone, Star, ImagePlus, Trash2, Video } from "lucide-react";
+import { supabase } from "./supabaseClient";
 
 /* Iconos de línea dibujados a medida — nada de librería genérica, para que cada
    categoría se sienta propia del campo y no de un marketplace cualquiera. */
@@ -215,8 +216,6 @@ const ZONAS = [
   "Cañada Grande", "Otra zona del departamento",
 ];
 
-const STORAGE_KEY = "marketplace-listings-sanjose";
-const RATINGS_KEY = "marketplace-ratings-sanjose";
 const MIS_AVISOS_KEY = "marketplace-mis-avisos-sanjose";
 
 function normalizeContact(contacto) {
@@ -340,6 +339,20 @@ function seedRatings() {
   };
 }
 
+// Convierte las filas planas que llegan de Supabase (una fila por calificación)
+// a la forma agrupada por contacto que usa el resto de la app.
+function groupRatings(rows) {
+  const grouped = {};
+  for (const r of rows) {
+    const key = normalizeContact(r.contacto);
+    if (!grouped[key]) grouped[key] = { count: 0, total: 0, reviews: [] };
+    grouped[key].count += 1;
+    grouped[key].total += r.estrellas;
+    grouped[key].reviews.push({ stars: r.estrellas, comment: r.comentario, nombre: r.autor, fecha: r.fecha });
+  }
+  return grouped;
+}
+
 export default function RegistroRuralSanJose() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -367,36 +380,42 @@ export default function RegistroRuralSanJose() {
   const [deleteToast, setDeleteToast] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      setListings(raw ? JSON.parse(raw) : seedListings());
-    } catch (err) {
-      setListings(seedListings());
-      setStorageOk(false);
+    async function cargarDatos() {
+      try {
+        const { data, error } = await supabase
+          .from("listings")
+          .select("*")
+          .order("fecha", { ascending: false });
+        if (error) throw error;
+        setListings(data && data.length ? data : seedListings());
+        setStorageOk(true);
+      } catch (err) {
+        setListings(seedListings());
+        setStorageOk(false);
+      }
+      try {
+        const { data, error } = await supabase
+          .from("ratings")
+          .select("*")
+          .order("fecha", { ascending: false });
+        if (error) throw error;
+        setRatings(data && data.length ? groupRatings(data) : seedRatings());
+      } catch (err) {
+        setRatings(seedRatings());
+      }
+      try {
+        const raw = localStorage.getItem(MIS_AVISOS_KEY);
+        setMisAvisos(raw ? JSON.parse(raw) : []);
+      } catch (err) {
+        setMisAvisos([]);
+      }
+      setLoading(false);
     }
-    try {
-      const raw = localStorage.getItem(RATINGS_KEY);
-      setRatings(raw ? JSON.parse(raw) : seedRatings());
-    } catch (err) {
-      setRatings(seedRatings());
-    }
-    try {
-      const raw = localStorage.getItem(MIS_AVISOS_KEY);
-      setMisAvisos(raw ? JSON.parse(raw) : []);
-    } catch (err) {
-      setMisAvisos([]);
-    }
-    setLoading(false);
+    cargarDatos();
   }, []);
 
   function persist(next) {
     setListings(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setStorageOk(true);
-    } catch (err) {
-      setStorageOk(false);
-    }
   }
 
   function persistMisAvisos(next) {
@@ -404,19 +423,25 @@ export default function RegistroRuralSanJose() {
     try {
       localStorage.setItem(MIS_AVISOS_KEY, JSON.stringify(next));
     } catch (err) {
-      setStorageOk(false);
+      // no es grave: en el peor caso, esta persona no ve el botón de "borrar mi aviso"
     }
   }
 
-  function deleteListing(id) {
+  async function deleteListing(id) {
     persist(listings.filter((l) => l.id !== id));
     persistMisAvisos(misAvisos.filter((mid) => mid !== id));
     setConfirmDeleteId(null);
     setDeleteToast(true);
     setTimeout(() => setDeleteToast(false), 2200);
+    try {
+      await supabase.from("listings").delete().eq("id", id);
+    } catch (err) {
+      // el aviso ya se sacó de la vista; si falló el borrado remoto, reaparecerá
+      // al recargar la página, pero no bloqueamos la experiencia por eso
+    }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!form.titulo.trim() || !isValidPhone(form.contacto)) return;
     setSaving(true);
@@ -425,9 +450,15 @@ export default function RegistroRuralSanJose() {
       ...form,
       fecha: new Date().toISOString(),
     };
-    const next = [nuevo, ...listings];
-    persist(next);
+    persist([nuevo, ...listings]);
     persistMisAvisos([...misAvisos, nuevo.id]);
+    try {
+      const { error } = await supabase.from("listings").insert(nuevo);
+      if (error) throw error;
+      setStorageOk(true);
+    } catch (err) {
+      setStorageOk(false);
+    }
     setSaving(false);
     setForm(emptyForm);
     setJustPublished(true);
@@ -492,31 +523,35 @@ export default function RegistroRuralSanJose() {
 
   function persistRatings(next) {
     setRatings(next);
-    try {
-      localStorage.setItem(RATINGS_KEY, JSON.stringify(next));
-    } catch (err) {
-      // Si falla (por ejemplo, en modo privado del navegador), la calificación
-      // queda visible en esta sesión igual, pero avisamos vía storageOk.
-      setStorageOk(false);
-    }
   }
 
-  function handleRatingSubmit(e) {
+  async function handleRatingSubmit(e) {
     e.preventDefault();
     if (!ratingTarget || ratingForm.stars < 1) return;
     setRatingSaving(true);
     const key = normalizeContact(ratingTarget.contacto);
     const prev = ratings[key] || { count: 0, total: 0, reviews: [] };
+    const nuevaReview = { stars: ratingForm.stars, comment: ratingForm.comment, nombre: ratingForm.nombre, fecha: new Date().toISOString() };
     const nextEntry = {
       count: prev.count + 1,
       total: prev.total + ratingForm.stars,
-      reviews: [
-        { stars: ratingForm.stars, comment: ratingForm.comment, nombre: ratingForm.nombre, fecha: new Date().toISOString() },
-        ...prev.reviews,
-      ],
+      reviews: [nuevaReview, ...prev.reviews],
     };
-    const next = { ...ratings, [key]: nextEntry };
-    persistRatings(next);
+    persistRatings({ ...ratings, [key]: nextEntry });
+    try {
+      const { error } = await supabase.from("ratings").insert({
+        id: `${Date.now()}`,
+        contacto: ratingTarget.contacto,
+        estrellas: ratingForm.stars,
+        comentario: ratingForm.comment,
+        autor: ratingForm.nombre,
+        fecha: nuevaReview.fecha,
+      });
+      if (error) throw error;
+    } catch (err) {
+      // la calificación queda visible en esta sesión igual, aunque no se haya
+      // guardado del lado del servidor
+    }
     setRatingSaving(false);
     setRatingTarget(null);
     setRatingForm(emptyRatingForm);
@@ -579,30 +614,40 @@ export default function RegistroRuralSanJose() {
         .rr-display { font-family: 'Libre Baskerville', serif; }
         .rr-mono { font-family: 'IBM Plex Mono', monospace; }
 
-        .rr-hero-banner {
-          position: relative;
-          width: 100%;
-          height: clamp(90px, 14vw, 160px);
-          overflow: hidden;
-        }
-        .rr-hero-banner img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          filter: saturate(0.9) sepia(0.12);
-        }
-        .rr-hero-banner-fade {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(31,46,22,0.15) 0%, rgba(228,226,180,0) 55%, var(--paper) 96%);
-        }
-
         .rr-hero {
           border-bottom: none;
           padding: 36px 24px 0;
           position: relative;
         }
+        .rr-hero-photo {
+          position: relative;
+          margin: 0 -24px 6px;
+          padding: 30px 24px 34px;
+          background-image:
+            linear-gradient(180deg, rgba(31,46,22,0.32) 0%, rgba(31,46,22,0.58) 65%, rgba(31,46,22,0.58) 100%),
+            url('https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1400');
+          background-size: cover;
+          background-position: center 55%;
+          overflow: hidden;
+        }
+        .rr-hero-photo::after {
+          content: "";
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          height: 46px;
+          background: linear-gradient(180deg, rgba(228,226,180,0) 0%, var(--paper) 100%);
+          pointer-events: none;
+        }
+        .rr-hero-photo .rr-eyebrow,
+        .rr-hero-photo .rr-title,
+        .rr-hero-photo .rr-sub {
+          color: #F3F1DA;
+          position: relative;
+          z-index: 1;
+        }
+        .rr-hero-photo .rr-title span { color: #E9C15A; }
+        .rr-hero-photo .rr-seal { color: #F3F1DA; opacity: 0.95; position: relative; z-index: 1; }
+        .rr-hero-photo .rr-cta { position: relative; z-index: 1; }
         .rr-hero-top {
           display: flex;
           align-items: flex-start;
@@ -1497,29 +1542,22 @@ export default function RegistroRuralSanJose() {
         }
       `}</style>
 
-      <div className="rr-hero-banner">
-        <img
-          src="https://images.pexels.com/photos/8402141/pexels-photo-8402141.jpeg?auto=compress&cs=tinysrgb&w=1600"
-          alt="Campo de San José al atardecer"
-          loading="eager"
-        />
-        <div className="rr-hero-banner-fade" />
-      </div>
-
       <header className="rr-hero">
-        <div className="rr-hero-top">
-          <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
-          <BrandSeal size={58} />
+        <div className="rr-hero-photo">
+          <div className="rr-hero-top">
+            <div className="rr-eyebrow"><IconLogoCampo size={19} /> Registro rural · Departamento de San José</div>
+            <BrandSeal size={58} />
+          </div>
+          <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
+          <p className="rr-sub">
+            Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
+            productores, empresas del agro y trabajadores autónomos del departamento.
+            Nada de lo que no sea del campo.
+          </p>
+          <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
+            <Plus size={16} /> Publicar un aviso
+          </button>
         </div>
-        <h1 className="rr-title">Se ofrece, se busca,<br/><span>se consigue.</span></h1>
-        <p className="rr-sub">
-          Servicios, maquinaria, insumos y ganado — un solo lugar para pequeños
-          productores, empresas del agro y trabajadores autónomos del departamento.
-          Nada de lo que no sea del campo.
-        </p>
-        <button className="rr-cta" onClick={() => { setPhotoError(""); setShowForm(true); }}>
-          <Plus size={16} /> Publicar un aviso
-        </button>
         <svg className="rr-fenceline" viewBox="0 0 800 34" preserveAspectRatio="none">
           <line x1="0" y1="24" x2="800" y2="24" stroke="currentColor" strokeWidth="1.5" />
           <line x1="0" y1="10" x2="800" y2="10" stroke="currentColor" strokeWidth="1" opacity="0.6" />
@@ -1557,8 +1595,8 @@ export default function RegistroRuralSanJose() {
 
       {!storageOk && (
         <div className="rr-warn">
-          No se pudo guardar en este navegador (puede pasar en modo privado/incógnito) — los avisos que publiques
-          se van a ver ahora, pero se van a perder si recargás la página.
+          No se pudo conectar con el servidor en este momento — los avisos que veas o publiques ahora
+          pueden no estar actualizados o no guardarse para los demás. Probá recargar la página en un rato.
         </div>
       )}
 
