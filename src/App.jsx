@@ -521,6 +521,7 @@ export default function RegistroRuralSanJose() {
   const [visibleCount, setVisibleCount] = useState(9);
   const [publishError, setPublishError] = useState("");
   const [shareToast, setShareToast] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // URL de la foto ampliada
 
   useEffect(() => {
     async function cargarDatos() {
@@ -1996,6 +1997,43 @@ export default function RegistroRuralSanJose() {
           margin: 0;
         }
 
+        .rr-lightbox {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.92);
+          z-index: 200;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          cursor: zoom-out;
+        }
+        .rr-lightbox img {
+          max-width: 100%;
+          max-height: 90vh;
+          object-fit: contain;
+          border-radius: 4px;
+          box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+          cursor: default;
+        }
+        .rr-lightbox-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: rgba(255,255,255,0.15);
+          border: none;
+          color: #fff;
+          font-size: 20px;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .rr-lightbox-close:hover { background: rgba(255,255,255,0.3); }
+
         .rr-toast {
           position: fixed;
           bottom: 24px;
@@ -2366,7 +2404,7 @@ export default function RegistroRuralSanJose() {
                       alt={l.titulo}
                       loading="lazy"
                       style={{ cursor: "zoom-in" }}
-                      onClick={() => window.open(fotos[0], "_blank", "noopener")}
+                      onClick={() => setLightbox(fotos[0])}
                     />
                     {fotos.length > 1 && (
                       <div className="rr-card-photo-extra">
@@ -2377,7 +2415,7 @@ export default function RegistroRuralSanJose() {
                             alt={`${l.titulo} foto ${i + 2}`}
                             loading="lazy"
                             style={{ cursor: "zoom-in" }}
-                            onClick={() => window.open(f, "_blank", "noopener")}
+                            onClick={() => setLightbox(f)}
                           />
                         ))}
                       </div>
@@ -2855,6 +2893,13 @@ export default function RegistroRuralSanJose() {
       {ratingToast && <div className="rr-toast">✓ Calificación guardada</div>}
       {deleteToast && <div className="rr-toast">✓ Aviso borrado</div>}
       {shareToast && <div className="rr-toast">✓ Link copiado</div>}
+
+      {lightbox && (
+        <div className="rr-lightbox" onClick={() => setLightbox(null)}>
+          <button className="rr-lightbox-close" onClick={() => setLightbox(null)}>✕</button>
+          <img src={lightbox} alt="Foto ampliada" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
       {reportToast && <div className="rr-toast">✓ Gracias, reportamos tu aviso</div>}
     </div>
   );
