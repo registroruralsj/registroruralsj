@@ -215,7 +215,7 @@ function MapaAvisos({ listings }) {
             key={avisos[0].zona}
             center={coords}
             radius={Math.min(8 + avisos.length * 3, 24)}
-            pathOptions={{ color: "#8C3A1E", fillColor: "#8C3A1E", fillOpacity: 0.82, weight: 1.5 }}
+            pathOptions={{ color: "#2F4B1E", fillColor: "#2F4B1E", fillOpacity: 0.82, weight: 1.5 }}
           >
             <Popup>
               <div className="rr-mapa-popup">
@@ -1369,10 +1369,8 @@ export default function RegistroRuralSanJose() {
           border-radius: 3px;
           border: 1.5px solid var(--paper-card);
           object-fit: cover;
-          cursor: pointer;
+          cursor: zoom-in;
         }
-        .rr-card-photo > a { display: block; width: 100%; height: 100%; }
-        .rr-card-photo > a img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .rr-video-link {
           display: inline-flex;
           align-items: center;
@@ -2363,15 +2361,24 @@ export default function RegistroRuralSanJose() {
                 {l.estado === "resuelto" && <div className="rr-resuelto-ribbon">Resuelto</div>}
                 {fotos.length > 0 && (
                   <div className="rr-card-photo">
-                    <a href={fotos[0]} target="_blank" rel="noopener noreferrer">
-                      <img src={fotos[0]} alt={l.titulo} loading="lazy" />
-                    </a>
+                    <img
+                      src={fotos[0]}
+                      alt={l.titulo}
+                      loading="lazy"
+                      style={{ cursor: "zoom-in" }}
+                      onClick={() => window.open(fotos[0], "_blank", "noopener")}
+                    />
                     {fotos.length > 1 && (
                       <div className="rr-card-photo-extra">
                         {fotos.slice(1, 3).map((f, i) => (
-                          <a key={i} href={f} target="_blank" rel="noopener noreferrer">
-                            <img src={f} alt={`${l.titulo} foto ${i + 2}`} loading="lazy" />
-                          </a>
+                          <img
+                            key={i}
+                            src={f}
+                            alt={`${l.titulo} foto ${i + 2}`}
+                            loading="lazy"
+                            style={{ cursor: "zoom-in" }}
+                            onClick={() => window.open(f, "_blank", "noopener")}
+                          />
                         ))}
                       </div>
                     )}
