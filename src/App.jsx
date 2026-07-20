@@ -466,7 +466,7 @@ Acá podés publicar o encontrar avisos de servicios rurales, maquinaria agríco
 
 Nació con el objetivo de darle visibilidad a la actividad rural del departamento — desde el pequeño productor familiar hasta la empresa agropecuaria — en un solo lugar, simple y sin burocracia.
 
-Si querés publicar un aviso de tu negocio o aparecer como anunciante en esta página, escribinos al WhatsApp del administrador.`;
+Si querés publicar un aviso de tu negocio o aparecer como anunciante en esta página, escribinos a registroruralsj@gmail.com`;
 
 // Convierte las filas planas que llegan de Supabase
 // a la forma agrupada por contacto que usa el resto de la app.
@@ -895,8 +895,8 @@ export default function RegistroRuralSanJose() {
           --ink: #1F2E16;
           --ink-soft: #4C5C2E;
           --line: #A9AE6C;
-          --stamp: #8C3A1E;
-          --stamp-soft: #A8532E;
+          --stamp: #2F4B1E;
+          --stamp-soft: #3D6128;
           --gold: #AC8A28;
           --green: #2E5C1C;
           --green-soft: #427B29;
@@ -1360,14 +1360,19 @@ export default function RegistroRuralSanJose() {
           right: 6px;
           display: flex;
           gap: 4px;
+          z-index: 2;
         }
+        .rr-card-photo-extra a { display: block; }
         .rr-card-photo-extra img {
           width: 34px;
           height: 34px;
           border-radius: 3px;
           border: 1.5px solid var(--paper-card);
           object-fit: cover;
+          cursor: pointer;
         }
+        .rr-card-photo > a { display: block; width: 100%; height: 100%; }
+        .rr-card-photo > a img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .rr-video-link {
           display: inline-flex;
           align-items: center;
@@ -2358,11 +2363,15 @@ export default function RegistroRuralSanJose() {
                 {l.estado === "resuelto" && <div className="rr-resuelto-ribbon">Resuelto</div>}
                 {fotos.length > 0 && (
                   <div className="rr-card-photo">
-                    <img src={fotos[0]} alt={l.titulo} loading="lazy" />
+                    <a href={fotos[0]} target="_blank" rel="noopener noreferrer">
+                      <img src={fotos[0]} alt={l.titulo} loading="lazy" />
+                    </a>
                     {fotos.length > 1 && (
                       <div className="rr-card-photo-extra">
                         {fotos.slice(1, 3).map((f, i) => (
-                          <img key={i} src={f} alt={`${l.titulo} foto ${i + 2}`} loading="lazy" />
+                          <a key={i} href={f} target="_blank" rel="noopener noreferrer">
+                            <img src={f} alt={`${l.titulo} foto ${i + 2}`} loading="lazy" />
+                          </a>
                         ))}
                       </div>
                     )}
