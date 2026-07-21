@@ -185,7 +185,6 @@ function MapaAvisos({ listings }) {
   const porZona = useMemo(() => {
     const acc = {};
     for (const l of listings) {
-      if (l.estado === "resuelto") continue;
       const coords = ZONA_COORDS[l.zona];
       if (!coords) continue;
       if (!acc[l.zona]) acc[l.zona] = { coords, avisos: [] };
@@ -515,7 +514,6 @@ export default function RegistroRuralSanJose() {
   const [reportingId, setReportingId] = useState(null);
   const [reportSent, setReportSent] = useState({}); // { [id]: true } — para no dejar reportar 2 veces seguidas en la misma sesión
   const [reportToast, setReportToast] = useState(false);
-  const [resolvingId, setResolvingId] = useState(null);
   const [filterZona, setFilterZona] = useState("todas");
   const [sortBy, setSortBy] = useState("recientes");
   const [visibleCount, setVisibleCount] = useState(9);
@@ -622,17 +620,6 @@ export default function RegistroRuralSanJose() {
     setVideoError("");
     setPublishError("");
     setShowForm(true);
-  }
-
-  async function toggleResolved(listing) {
-    const nuevoEstado = listing.estado === "resuelto" ? "activo" : "resuelto";
-    persist(listings.map((x) => (x.id === listing.id ? { ...x, estado: nuevoEstado } : x)));
-    setResolvingId(null);
-    try {
-      await supabase.from("listings").update({ estado: nuevoEstado }).eq("id", listing.id);
-    } catch (err) {
-      // si falla, se corrige solo al recargar la página
-    }
   }
 
   async function submitReport(id, motivo) {
@@ -859,7 +846,6 @@ export default function RegistroRuralSanJose() {
     .filter((l) => {
       if (onlyGuardados && !guardados.includes(l.id)) return false;
       if (onlyMine && !misAvisos.includes(l.id)) return false;
-      if (!onlyMine && !onlyGuardados && l.estado === "resuelto") return false;
       if (filterCat !== "todos" && l.categoria !== filterCat) return false;
       if (filterTipo !== "todos" && l.tipo !== filterTipo) return false;
       if (filterZona !== "todas" && l.zona !== filterZona) return false;
@@ -1182,21 +1168,6 @@ export default function RegistroRuralSanJose() {
         }
         .rr-mostrar-mas:hover { border-color: var(--stamp); color: var(--stamp); }
 
-        .rr-card-resuelto { opacity: 0.68; }
-        .rr-resuelto-ribbon {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          background: var(--ink);
-          color: var(--paper-card);
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 10px;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          padding: 4px 9px;
-          border-radius: 3px;
-          z-index: 2;
-        }
         .rr-card-highlight {
           outline: 2px solid var(--gold);
           outline-offset: 3px;
@@ -2395,8 +2366,7 @@ export default function RegistroRuralSanJose() {
             // Compatibilidad con avisos viejos que tenían una sola "foto" en vez de "fotos".
             const fotos = l.fotos && l.fotos.length ? l.fotos : l.foto ? [l.foto] : [];
             return (
-              <div className={`rr-card ${l.estado === "resuelto" ? "rr-card-resuelto" : ""}`} key={l.id} id={`aviso-${l.id}`}>
-                {l.estado === "resuelto" && <div className="rr-resuelto-ribbon">Resuelto</div>}
+              <div className="rr-card" key={l.id} id={`aviso-${l.id}`}>
                 {fotos.length > 0 && (
                   <div className="rr-card-photo">
                     <img
@@ -2505,9 +2475,6 @@ export default function RegistroRuralSanJose() {
                   <div className="rr-owner-row">
                     <button type="button" className="rr-owner-link" onClick={() => openEditForm(l)}>
                       Editar
-                    </button>
-                    <button type="button" className="rr-owner-link" onClick={() => toggleResolved(l)}>
-                      {l.estado === "resuelto" ? "Reactivar aviso" : "Marcar como resuelto"}
                     </button>
                     {confirmDeleteId === l.id ? (
                       <div className="rr-delete-confirm">
