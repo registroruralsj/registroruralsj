@@ -307,7 +307,7 @@ const emptyRatingForm = { stars: 0, comment: "", nombre: "" };
 
 const MAX_FOTOS = 3;
 const RATE_LIMIT_KEY = "marketplace-publish-times-sanjose";
-const RATE_LIMIT_MAX = 5; // avisos nuevos permitidos por hora, por navegador
+const RATE_LIMIT_MAX = 50; // avisos nuevos permitidos por hora, por navegador
 
 // Freno básico contra spam automatizado: como cualquiera puede publicar sin
 // login, limitamos cuántos avisos nuevos puede cargar el mismo navegador por hora.
