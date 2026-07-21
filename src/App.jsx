@@ -507,7 +507,6 @@ export default function RegistroRuralSanJose() {
   const [guardados, setGuardados] = useState([]);
   const [onlyMine, setOnlyMine] = useState(false);
   const [onlyGuardados, setOnlyGuardados] = useState(false);
-  const [activeView, setActiveView] = useState("avisos"); // "avisos" | "acerca"
   const [pushGranted, setPushGranted] = useState(false);
   const [deleteToast, setDeleteToast] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -1840,47 +1839,6 @@ export default function RegistroRuralSanJose() {
         }
         .rr-guardado-active { color: var(--stamp) !important; }
 
-        .rr-cta-row {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          flex-wrap: wrap;
-          position: relative;
-          z-index: 1;
-        }
-        .rr-acerca-link {
-          background: transparent;
-          border: none;
-          color: rgba(243,241,218,0.8);
-          font-family: 'Public Sans', sans-serif;
-          font-size: 13px;
-          cursor: pointer;
-          text-decoration: underline;
-          text-decoration-color: transparent;
-          padding: 0;
-        }
-        .rr-acerca-link:hover { text-decoration-color: currentColor; }
-
-        .rr-acerca {
-          padding: 28px 24px 16px;
-          max-width: 680px;
-          margin: 0 auto;
-        }
-        .rr-acerca-title {
-          font-family: 'Libre Baskerville', serif;
-          font-size: 20px;
-          font-weight: 700;
-          margin: 0 0 16px;
-          color: var(--ink);
-        }
-        .rr-acerca p {
-          font-family: 'Public Sans', sans-serif;
-          font-size: 14px;
-          line-height: 1.7;
-          color: var(--ink-soft);
-          margin: 0 0 12px;
-        }
-
         .rr-banner-ad {
           position: relative;
           margin: 0 24px 24px;
@@ -2196,14 +2154,9 @@ export default function RegistroRuralSanJose() {
             productores, empresas del agro y trabajadores autónomos del departamento.
             Nada de lo que no sea del campo.
           </p>
-          <div className="rr-cta-row">
-            <button className="rr-cta" onClick={() => { setPhotoError(""); setVideoError(""); setPublishError(""); setEditingId(null); setForm(emptyForm); setShowForm(true); }}>
-              <Plus size={16} /> Publicar un aviso
-            </button>
-            <button className="rr-acerca-link" onClick={() => setActiveView((v) => v === "acerca" ? "avisos" : "acerca")}>
-              {activeView === "acerca" ? "← Volver a los avisos" : "¿Qué es esto?"}
-            </button>
-          </div>
+          <button className="rr-cta" onClick={() => { setPhotoError(""); setVideoError(""); setPublishError(""); setEditingId(null); setForm(emptyForm); setShowForm(true); }}>
+            <Plus size={16} /> Publicar un aviso
+          </button>
         </div>
         <svg className="rr-fenceline" viewBox="0 0 800 34" preserveAspectRatio="none">
           <line x1="0" y1="24" x2="800" y2="24" stroke="currentColor" strokeWidth="1.5" />
@@ -2514,15 +2467,6 @@ export default function RegistroRuralSanJose() {
       )}
 
       {!loading && listings.length > 0 && <MapaAvisos listings={listings} />}
-
-      {activeView === "acerca" && (
-        <section className="rr-acerca">
-          <h2 className="rr-acerca-title">Sobre Registro Rural San José</h2>
-          {ACERCA_DE.split("\n\n").map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-        </section>
-      )}
 
       {BANNER_ACTIVO && (
         <div className="rr-banner-ad">
