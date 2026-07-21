@@ -2486,7 +2486,7 @@ export default function RegistroRuralSanJose() {
                 </a>
               )}
               {!BANNER.url && !BANNER.telefono && (
-                <a href="mailto:registroruralsj@gmail.com" className="rr-banner-btn">
+                <a href="mailto:registroruraluy@gmail.com" className="rr-banner-btn">
                   Contactar para anunciar
                 </a>
               )}
